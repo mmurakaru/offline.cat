@@ -1,37 +1,40 @@
 {
-	"name": "offlinecat-project",
-	"private": true,
-	"author": "mmurakaru",
-	"type": "module",
-	"scripts": {
-		"build": "react-router build",
-		"dev": "react-router dev",
-		"start": "react-router-serve ./build/server/index.js",
-		"typecheck": "react-router typegen && tsc"
-	},
-	"dependencies": {
-		"@react-router/fs-routes": "^7.14.0",
-		"@react-router/node": "7.14.0",
-		"@react-router/serve": "7.14.0",
-		"fast-xml-parser": "^5.5.10",
-		"fflate": "^0.8.2",
-		"idb": "^8.0.3",
-		"isbot": "^5.1.36",
-		"react": "^19.2.4",
-		"react-aria-components": "^1.16.0",
-		"react-dom": "^19.2.4",
-		"react-router": "7.14.0"
-	},
-	"devDependencies": {
-		"@playwright/test": "^1.59.1",
-		"@react-router/dev": "7.14.0",
-		"@tailwindcss/vite": "^4.2.2",
-		"@types/node": "^22",
-		"@types/react": "^19.2.14",
-		"@types/react-dom": "^19.2.3",
-		"tailwindcss": "^4.2.2",
-		"typescript": "^5.9.3",
-		"vite": "^8.0.3",
-		"vitest": "^4.1.2"
-	}
+  "name": "offlinecat-project",
+  "private": true,
+  "author": "mmurakaru",
+  "type": "module",
+  "scripts": {
+    "build": "react-router build",
+    "dev": "react-router dev",
+    "start": "react-router-serve ./build/server/index.js",
+    "typecheck": "react-router typegen && tsc",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write ."
+  },
+  "dependencies": {
+    "@react-router/fs-routes": "^7.14.0",
+    "@react-router/node": "7.14.0",
+    "@react-router/serve": "7.14.0",
+    "fast-xml-parser": "^5.5.10",
+    "fflate": "^0.8.2",
+    "idb": "^8.0.3",
+    "isbot": "^5.1.36",
+    "react": "^19.2.4",
+    "react-aria-components": "^1.16.0",
+    "react-dom": "^19.2.4",
+    "react-router": "7.14.0"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.4.10",
+    "@playwright/test": "^1.59.1",
+    "@react-router/dev": "7.14.0",
+    "@tailwindcss/vite": "^4.2.2",
+    "@types/node": "^22",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "tailwindcss": "^4.2.2",
+    "typescript": "^5.9.3",
+    "vite": "^8.0.3",
+    "vitest": "^4.1.2"
+  }
 }

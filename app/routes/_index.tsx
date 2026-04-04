@@ -1,7 +1,11 @@
 export function meta() {
   return [
     { title: "offline.cat" },
-    { name: "description", content: "Translate documents offline. No servers. No accounts. No exceptions." },
+    {
+      name: "description",
+      content:
+        "Translate documents offline. No servers. No accounts. No exceptions.",
+    },
   ];
 }
 
