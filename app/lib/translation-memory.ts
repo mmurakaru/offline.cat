@@ -1,7 +1,7 @@
-import type { TMEntry } from "./db";
+import type { TranslationMemoryEntry } from "./db";
 import { getDB } from "./db";
 
-export interface TMMatch {
+export interface TranslationMemoryMatch {
   score: number;
   translation: string;
 }
@@ -53,16 +53,20 @@ export function similarity(source: string, target: string): number {
   return ((longer.length - editDistance) / longer.length) * 100;
 }
 
-export async function findTMMatch(
+export async function findTranslationMemoryMatch(
   source: string,
   langPair: string,
-): Promise<TMMatch> {
+): Promise<TranslationMemoryMatch> {
   const db = await getDB();
   const normalized = normalize(source);
   const tokens = tokenize(normalized);
-  const allEntries = await db.getAllFromIndex("tm", "langPair", langPair);
+  const allEntries = await db.getAllFromIndex(
+    "translationMemory",
+    "langPair",
+    langPair,
+  );
 
-  let bestMatch: TMMatch = { score: 0, translation: "" };
+  let bestMatch: TranslationMemoryMatch = { score: 0, translation: "" };
 
   // Pre-filter by token overlap before expensive Levenshtein
   const candidates = allEntries.filter((entry) => {
@@ -82,7 +86,7 @@ export async function findTMMatch(
   return bestMatch;
 }
 
-export async function addTMEntry(
+export async function addTranslationMemoryEntry(
   source: string,
   target: string,
   langPair: string,
@@ -91,7 +95,7 @@ export async function addTMEntry(
   const sourceNormalized = normalize(source);
   const sourceTokens = tokenize(sourceNormalized);
 
-  await db.put("tm", {
+  await db.put("translationMemory", {
     id: crypto.randomUUID(),
     source,
     sourceNormalized,

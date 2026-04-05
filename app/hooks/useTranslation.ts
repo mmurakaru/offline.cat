@@ -5,9 +5,9 @@ export interface Segment {
   id: string;
   source: string;
   target?: string;
-  origin?: "tm" | "mt" | "user";
-  tmSuggestion?: string;
-  tmScore?: number;
+  origin?: "translationMemory" | "mt" | "user";
+  translationMemorySuggestion?: string;
+  translationMemoryScore?: number;
   needsTranslation?: boolean;
 }
 

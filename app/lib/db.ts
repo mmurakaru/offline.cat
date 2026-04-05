@@ -1,6 +1,6 @@
 import { type DBSchema, type IDBPDatabase, openDB } from "idb";
 
-export interface TMEntry {
+export interface TranslationMemoryEntry {
   id: string;
   source: string;
   sourceNormalized: string;
@@ -19,9 +19,9 @@ export interface FileRecord {
 }
 
 interface OfflineCatDB extends DBSchema {
-  tm: {
+  translationMemory: {
     key: string;
-    value: TMEntry;
+    value: TranslationMemoryEntry;
     indexes: {
       langPair: string;
     };
@@ -39,8 +39,8 @@ export async function getDB(): Promise<IDBPDatabase<OfflineCatDB>> {
 
   dbInstance = await openDB<OfflineCatDB>("offline-cat", 2, {
     upgrade(db) {
-      if (!db.objectStoreNames.contains("tm")) {
-        const store = db.createObjectStore("tm", { keyPath: "id" });
+      if (!db.objectStoreNames.contains("translationMemory")) {
+        const store = db.createObjectStore("translationMemory", { keyPath: "id" });
         store.createIndex("langPair", "langPair");
       }
       if (!db.objectStoreNames.contains("files")) {

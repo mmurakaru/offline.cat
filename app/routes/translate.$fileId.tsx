@@ -5,7 +5,10 @@ import type { Segment } from "../hooks/useTranslation";
 import { useTranslation } from "../hooks/useTranslation";
 import { getDB } from "../lib/db";
 import { extractSegments, reconstructFile } from "../lib/parser-client";
-import { addTMEntry, findTMMatch } from "../lib/tm";
+import {
+  addTranslationMemoryEntry,
+  findTranslationMemoryMatch,
+} from "../lib/translation-memory";
 
 export function meta() {
   return [{ title: "Translate - offline.cat" }];
@@ -25,9 +28,9 @@ const LANGUAGES = [
 ];
 
 function getMatchColor(segment: Segment): string {
-  if (!segment.origin && !segment.tmScore) return "";
-  if (segment.origin === "tm") {
-    const score = segment.tmScore ?? 100;
+  if (!segment.origin && !segment.translationMemoryScore) return "";
+  if (segment.origin === "translationMemory") {
+    const score = segment.translationMemoryScore ?? 100;
     if (score >= 95) return "bg-green-50 dark:bg-green-950";
     return "bg-yellow-50 dark:bg-yellow-950";
   }
@@ -37,13 +40,14 @@ function getMatchColor(segment: Segment): string {
 }
 
 function getMatchLabel(segment: Segment): string | null {
-  if (segment.origin === "tm") {
-    const score = segment.tmScore ?? 100;
-    return `TM ${Math.round(score)}%`;
+  if (segment.origin === "translationMemory") {
+    const score = segment.translationMemoryScore ?? 100;
+    return `Memory ${Math.round(score)}%`;
   }
   if (segment.origin === "mt") return "MT";
   if (segment.origin === "user") return "Confirmed";
-  if (segment.tmSuggestion) return `TM ${Math.round(segment.tmScore ?? 0)}%`;
+  if (segment.translationMemorySuggestion)
+    return `Memory ${Math.round(segment.translationMemoryScore ?? 0)}%`;
   return null;
 }
 
@@ -75,26 +79,29 @@ export default function Translate() {
 
       const rawSegments = await extractSegments(data, ext);
 
-      // Run TM check on each segment
+      // Check translation memory for each segment
       const langPair = `${sourceLanguage}-${targetLanguage}`;
       const processed: Segment[] = await Promise.all(
         rawSegments.map(async (segment) => {
-          const match = await findTMMatch(segment.source, langPair);
+          const match = await findTranslationMemoryMatch(
+            segment.source,
+            langPair,
+          );
 
           if (match.score >= 95) {
             return {
               ...segment,
               target: match.translation,
-              origin: "tm" as const,
-              tmScore: match.score,
+              origin: "translationMemory" as const,
+              translationMemoryScore: match.score,
             };
           }
 
           if (match.score >= 75) {
             return {
               ...segment,
-              tmSuggestion: match.translation,
-              tmScore: match.score,
+              translationMemorySuggestion: match.translation,
+              translationMemoryScore: match.score,
               needsTranslation: true,
             };
           }
@@ -119,7 +126,7 @@ export default function Translate() {
       if (!segment) return;
 
       const langPair = `${sourceLanguage}-${targetLanguage}`;
-      await addTMEntry(segment.source, translation, langPair);
+      await addTranslationMemoryEntry(segment.source, translation, langPair);
 
       setSegments((prev) =>
         prev.map((s) =>
@@ -295,9 +302,9 @@ export default function Translate() {
                 </span>
                 <p className="text-sm">{segment.source}</p>
                 <div className="flex flex-col gap-1">
-                  {segment.tmSuggestion && !segment.target && (
+                  {segment.translationMemorySuggestion && !segment.target && (
                     <p className="text-xs text-yellow-600 italic">
-                      TM suggestion: {segment.tmSuggestion}
+                      Memory suggestion: {segment.translationMemorySuggestion}
                     </p>
                   )}
                   <input
@@ -326,8 +333,8 @@ export default function Translate() {
                       className={`text-xs px-2 py-0.5 rounded-full ${
                         segment.origin === "user" ||
                         (
-                          segment.origin === "tm" &&
-                            (segment.tmScore ?? 0) >= 95
+                          segment.origin === "translationMemory" &&
+                            (segment.translationMemoryScore ?? 0) >= 95
                         )
                           ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
                           : segment.origin === "mt"

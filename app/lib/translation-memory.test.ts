@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { levenshtein, normalize, similarity, tokenize } from "./tm";
+import {
+  levenshtein,
+  normalize,
+  similarity,
+  tokenize,
+} from "./translation-memory";
 
 describe("normalize", () => {
   it("lowercases text", () => {
