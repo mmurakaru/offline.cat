@@ -37,10 +37,12 @@ let dbInstance: IDBPDatabase<OfflineCatDB> | null = null;
 export async function getDB(): Promise<IDBPDatabase<OfflineCatDB>> {
   if (dbInstance) return dbInstance;
 
-  dbInstance = await openDB<OfflineCatDB>("offline-cat", 2, {
+  dbInstance = await openDB<OfflineCatDB>("offline-cat", 1, {
     upgrade(db) {
       if (!db.objectStoreNames.contains("translationMemory")) {
-        const store = db.createObjectStore("translationMemory", { keyPath: "id" });
+        const store = db.createObjectStore("translationMemory", {
+          keyPath: "id",
+        });
         store.createIndex("langPair", "langPair");
       }
       if (!db.objectStoreNames.contains("files")) {
