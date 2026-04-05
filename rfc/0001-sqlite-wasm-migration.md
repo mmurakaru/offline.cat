@@ -1,4 +1,4 @@
-# RFD: Migrate from IndexedDB + idb to SQLite Wasm + OPFS
+# RFC: Migrate from IndexedDB + idb to SQLite Wasm + OPFS
 
 **Status:** Draft
 **Author:** Markus Murakaru
