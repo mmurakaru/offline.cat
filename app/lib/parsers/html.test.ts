@@ -4,37 +4,44 @@ import { extractSegments, reconstructHtml } from "./html";
 
 describe("extractSegments", () => {
   it("extracts text nodes from HTML", () => {
-    const html = "<p>Hello</p><p>World</p>";
-    const segments = extractSegments(html);
+    // Act
+    const segments = extractSegments("<p>Hello</p><p>World</p>");
+
+    // Assert
     expect(segments).toHaveLength(2);
     expect(segments[0].source).toBe("Hello");
     expect(segments[1].source).toBe("World");
   });
 
   it("skips empty text nodes", () => {
-    const html = "<div>  </div><p>Hello</p>";
-    const segments = extractSegments(html);
+    // Act
+    const segments = extractSegments("<div>  </div><p>Hello</p>");
+
+    // Assert
     expect(segments).toHaveLength(1);
     expect(segments[0].source).toBe("Hello");
   });
 
   it("assigns sequential ids", () => {
-    const html = "<p>One</p><p>Two</p><p>Three</p>";
-    const segments = extractSegments(html);
+    // Act
+    const segments = extractSegments("<p>One</p><p>Two</p><p>Three</p>");
+
+    // Assert
     expect(segments[0].id).toBe("html-0");
     expect(segments[1].id).toBe("html-1");
     expect(segments[2].id).toBe("html-2");
   });
 
   it("returns empty array for HTML with no text", () => {
-    const html = "<div><img /><br /></div>";
-    const segments = extractSegments(html);
-    expect(segments).toEqual([]);
+    // Act & Assert
+    expect(extractSegments("<div><img /><br /></div>")).toEqual([]);
   });
 
   it("handles nested elements", () => {
-    const html = "<div><span>Nested</span></div>";
-    const segments = extractSegments(html);
+    // Act
+    const segments = extractSegments("<div><span>Nested</span></div>");
+
+    // Assert
     expect(segments).toHaveLength(1);
     expect(segments[0].source).toBe("Nested");
   });
@@ -42,12 +49,17 @@ describe("extractSegments", () => {
 
 describe("reconstructHtml", () => {
   it("replaces text with translations", () => {
+    // Arrange
     const html = "<p>Hello</p><p>World</p>";
     const translations = new Map([
       ["html-0", "Hola"],
       ["html-1", "Mundo"],
     ]);
+
+    // Act
     const result = reconstructHtml(html, translations);
+
+    // Assert
     expect(result).toContain("Hola");
     expect(result).toContain("Mundo");
     expect(result).not.toContain("Hello");
@@ -55,9 +67,13 @@ describe("reconstructHtml", () => {
   });
 
   it("leaves untranslated segments unchanged", () => {
-    const html = "<p>Hello</p><p>World</p>";
+    // Arrange
     const translations = new Map([["html-0", "Hola"]]);
-    const result = reconstructHtml(html, translations);
+
+    // Act
+    const result = reconstructHtml("<p>Hello</p><p>World</p>", translations);
+
+    // Assert
     expect(result).toContain("Hola");
     expect(result).toContain("World");
   });
