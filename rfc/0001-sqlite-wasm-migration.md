@@ -12,6 +12,24 @@ Replace the current IndexedDB persistence layer (`idb` library) with SQLite comp
 
 ---
 
+## Strategic context
+
+offline.cat's core promise is "professional CAT tooling with no server, no account, no lock-in." SQLite + OPFS is the storage layer that makes that promise durable at scale. This isn't just a performance improvement - it's the foundation the Phase 2 and Phase 3 roadmap is built on.
+
+### Phased roadmap
+
+| Phase | Scope | Storage implication |
+|-------|-------|---------------------|
+| **Phase 1** | Personal TM, browser only, stays local | SQLite Wasm + OPFS replaces IndexedDB |
+| **Phase 2** | Mac/Windows app (Tauri) reads the same `.db` file | Zero translation layer - Tauri uses SQLite natively |
+| **Phase 3** | Collaborative TM: multiple translators contributing to a shared translation memory. Requires conflict resolution (e.g. cr-sqlite, merge-on-import). | SQLite has ecosystem tools for this; IndexedDB does not |
+
+### Competitive differentiation
+
+No other browser-based CAT tool has real SQL + durable local storage + a portable file format. Most browser-based tools either depend on a server or store data in IndexedDB with no export path. The combination of SQLite, OPFS, and a single-file database format is a moat, not just a technical detail.
+
+---
+
 ## Motivation
 
 The current stack uses `idb` (v8.0.3) wrapping IndexedDB with two object stores: `translationMemory` and `files`. This works for v1 but creates friction as the app grows:
@@ -111,6 +129,18 @@ Optional self-hosted sync between devices (Q4 roadmap) is dramatically simpler w
 
 **5. Tooling and debugging.**
 SQLite databases can be inspected with any SQLite viewer. IndexedDB requires Chrome DevTools. Developers can `SELECT * FROM translation_memory WHERE lang_pair = 'en-es' ORDER BY created_at DESC LIMIT 10` during debugging instead of writing throwaway JS.
+
+**6. Data durability.**
+IndexedDB is subject to browser eviction under low disk pressure. The browser can silently delete stored data when the device runs low on space. OPFS is not evictable - it's treated as a real file by the OS. For a translator whose TM represents months of accumulated work, this is a meaningful safety guarantee. A lost TM isn't an inconvenience - it's lost productivity that can't be rebuilt.
+
+**7. Export/import as a user-facing feature.**
+The `.db` file isn't just a portability detail for developers - it's a user feature:
+
+- Export your entire TM as a single file. Back it up, email it, put it on a USB drive.
+- Translation agencies share TM files across translators - no server required.
+- Import on a new machine in one step. No account, no sync, no re-upload.
+
+This is invisible with IndexedDB. There is no standard way for a user to export or share an IndexedDB database. With SQLite, the database *is* the export format.
 
 ---
 
@@ -446,8 +476,15 @@ SQLite's FTS5 extension could eventually replace the Levenshtein-based fuzzy mat
 ## Open questions
 
 - **Bundle size impact?** `@sqlite.org/sqlite-wasm` ships a ~1MB wasm binary. This is cached by the service worker after first load, so repeat visits pay nothing. But first-load cost is meaningful for a tool that promises "zero installation." Measure and decide if lazy-loading the wasm is worth the complexity.
-- **Safari OPFS support depth?** Safari 17+ supports `createSyncAccessHandle()`, but offline.cat currently targets Chrome 138+ only. If Safari support matters for Phase 1, verify SQLite Wasm's OPFS VFS works correctly on Safari.
 - **Should the SQLite file name include a version?** e.g. `offline-cat-v1.db`. This makes future breaking schema changes simpler (open new file, migrate, delete old) but adds naming complexity.
+
+---
+
+## Data scalability
+
+The scalability challenge for offline.cat isn't server scalability - there is no server. It's data scalability: a professional translator with 10 million TM segments should get fast fuzzy matches, offline, in the browser. IndexedDB has no query planner, no indexes beyond simple key ranges, and no way to push filtering into the storage engine. Every query is a full scan deserialized into JS.
+
+SQLite handles this natively. B-tree indexes, the query planner, FTS5, and `json_each()` all run inside the Wasm engine at near-native speed. The database scales with the translator's career, not against it. No other browser-based CAT tool can make this claim.
 
 ---
 
