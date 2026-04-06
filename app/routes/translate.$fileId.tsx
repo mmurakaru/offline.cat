@@ -1,3 +1,4 @@
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "react-aria-components";
 import { useNavigate, useParams } from "react-router";
@@ -59,6 +60,7 @@ export default function Translate() {
   const [sourceLanguage, setSourceLanguage] = useState("en");
   const [targetLanguage, setTargetLanguage] = useState("es");
   const fileDataRef = useRef<{ data: Uint8Array; ext: string } | null>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const { segments, setSegments, isTranslating, error, translate, cancel } =
     useTranslation();
 
@@ -179,7 +181,7 @@ export default function Translate() {
 
     const baseName = fileName.replace(/\.[^.]+$/, "");
     const outputName = `${baseName}_${targetLanguage}.${fileInfo.ext}`;
-    const outputBlob = new Blob([result], {
+    const outputBlob = new Blob([result as BlobPart], {
       type: mimeTypes[fileInfo.ext] ?? "application/octet-stream",
     });
 
@@ -197,6 +199,13 @@ export default function Translate() {
     const confirmed = segments.filter((s) => s.origin === "user").length;
     return { total, translated, confirmed };
   }, [segments]);
+
+  const virtualizer = useVirtualizer({
+    count: segments.length,
+    getScrollElement: () => scrollContainerRef.current,
+    estimateSize: () => 64,
+    overscan: 10,
+  });
 
   return (
     <main className="min-h-screen">
@@ -295,71 +304,100 @@ export default function Translate() {
             No translatable segments found.
           </p>
         ) : (
-          <div className="border rounded-lg dark:border-gray-800 divide-y dark:divide-gray-800">
+          <div className="border rounded-lg dark:border-gray-800">
             {/* Column headers */}
-            <div className="grid grid-cols-[auto_1fr_1fr_auto] gap-4 px-4 py-2 text-xs font-medium text-gray-500 uppercase">
+            <div className="grid grid-cols-[auto_1fr_1fr_auto] gap-4 px-4 py-2 text-xs font-medium text-gray-500 uppercase border-b dark:border-gray-800">
               <span className="w-8">#</span>
               <span>Source</span>
               <span>Target</span>
               <span className="w-20">Status</span>
             </div>
 
-            {segments.map((segment, index) => (
+            <div
+              ref={scrollContainerRef}
+              className="overflow-auto"
+              style={{ height: "calc(100vh - 200px)" }}
+            >
               <div
-                key={segment.id}
-                className={`grid grid-cols-[auto_1fr_1fr_auto] gap-4 px-4 py-3 ${getMatchColor(segment)}`}
+                style={{
+                  height: `${virtualizer.getTotalSize()}px`,
+                  position: "relative",
+                }}
               >
-                <span className="w-8 text-xs text-gray-400 pt-1">
-                  {index + 1}
-                </span>
-                <p className="text-sm">{segment.source}</p>
-                <div className="flex flex-col gap-1">
-                  {segment.translationMemorySuggestion && !segment.target && (
-                    <p className="text-xs text-yellow-600 italic">
-                      Memory suggestion: {segment.translationMemorySuggestion}
-                    </p>
-                  )}
-                  <input
-                    type="text"
-                    value={segment.target ?? ""}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      setSegments((prev) =>
-                        prev.map((s) =>
-                          s.id === segment.id ? { ...s, target: value } : s,
-                        ),
-                      );
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && segment.target) {
-                        handleConfirm(segment.id, segment.target);
-                      }
-                    }}
-                    placeholder="Translation..."
-                    className="w-full text-sm border rounded px-2 py-1 bg-transparent dark:border-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  />
-                </div>
-                <div className="w-20 flex items-start">
-                  {getMatchLabel(segment) && (
-                    <span
-                      className={`text-xs px-2 py-0.5 rounded-full ${
-                        segment.origin === "user" ||
-                        (
-                          segment.origin === "translationMemory" &&
-                            (segment.translationMemoryScore ?? 0) >= 95
-                        )
-                          ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
-                          : segment.origin === "mt"
-                            ? "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"
-                            : "bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300"
-                      }`}
+                {virtualizer.getVirtualItems().map((virtualRow) => {
+                  const segment = segments[virtualRow.index];
+                  return (
+                    <div
+                      key={segment.id}
+                      data-index={virtualRow.index}
+                      ref={virtualizer.measureElement}
+                      className={`grid grid-cols-[auto_1fr_1fr_auto] gap-4 px-4 py-3 border-b dark:border-gray-800 ${getMatchColor(segment)}`}
+                      style={{
+                        position: "absolute",
+                        top: 0,
+                        left: 0,
+                        width: "100%",
+                        transform: `translateY(${virtualRow.start}px)`,
+                      }}
                     >
-                      {getMatchLabel(segment)}
-                    </span>
-                  )}
-                </div>
+                      <span className="w-8 text-xs text-gray-400 pt-1">
+                        {virtualRow.index + 1}
+                      </span>
+                      <p className="text-sm">{segment.source}</p>
+                      <div className="flex flex-col gap-1">
+                        {segment.translationMemorySuggestion &&
+                          !segment.target && (
+                            <p className="text-xs text-yellow-600 italic">
+                              Memory suggestion:{" "}
+                              {segment.translationMemorySuggestion}
+                            </p>
+                          )}
+                        <input
+                          type="text"
+                          value={segment.target ?? ""}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            setSegments((prev) =>
+                              prev.map((s) =>
+                                s.id === segment.id
+                                  ? { ...s, target: value }
+                                  : s,
+                              ),
+                            );
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" && segment.target) {
+                              handleConfirm(segment.id, segment.target);
+                            }
+                          }}
+                          placeholder="Translation..."
+                          className="w-full text-sm border rounded px-2 py-1 bg-transparent dark:border-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        />
+                      </div>
+                      <div className="w-20 flex items-start">
+                        {getMatchLabel(segment) && (
+                          <span
+                            className={`text-xs px-2 py-0.5 rounded-full ${
+                              segment.origin === "user" ||
+                              (
+                                segment.origin === "translationMemory" &&
+                                  (segment.translationMemoryScore ?? 0) >= 95
+                              )
+                                ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
+                                : segment.origin === "mt"
+                                  ? "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"
+                                  : "bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300"
+                            }`}
+                          >
+                            {getMatchLabel(segment)}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-            ))}
+            </div>
           </div>
         )}
       </div>
