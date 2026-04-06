@@ -1,12 +1,21 @@
-import { useVirtualizer } from "@tanstack/react-virtual";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "react-aria-components";
 import { useNavigate, useParams } from "react-router";
+import { InspectorPanel } from "../components/InspectorPanel";
+import { OutlineSidebar } from "../components/OutlineSidebar";
+import { SegmentListEditor } from "../components/SegmentListEditor";
+import { SlideCanvas } from "../components/SlideCanvas";
 import type { Segment } from "../hooks/useTranslation";
 import { useTranslation } from "../hooks/useTranslation";
 import type { FileRecord } from "../lib/db";
 import { getDB } from "../lib/db";
-import { extractSegments, reconstructFile } from "../lib/parser-client";
+import {
+  type SlideLayout,
+  extractSegments,
+  extractVisualLayout,
+  reconstructFile,
+  revokeImageUrls,
+} from "../lib/parser-client";
 import {
   addTranslationMemoryEntry,
   findTranslationMemoryMatch,
@@ -29,38 +38,18 @@ const LANGUAGES = [
   { id: "zh", name: "Chinese" },
 ];
 
-function getMatchColor(segment: Segment): string {
-  if (!segment.origin && !segment.translationMemoryScore) return "";
-  if (segment.origin === "translationMemory") {
-    const score = segment.translationMemoryScore ?? 100;
-    if (score >= 95) return "bg-green-50 dark:bg-green-950";
-    return "bg-yellow-50 dark:bg-yellow-950";
-  }
-  if (segment.origin === "mt") return "bg-white dark:bg-gray-900";
-  if (segment.origin === "user") return "bg-green-50 dark:bg-green-950";
-  return "";
-}
-
-function getMatchLabel(segment: Segment): string | null {
-  if (segment.origin === "translationMemory") {
-    const score = segment.translationMemoryScore ?? 100;
-    return `Memory ${Math.round(score)}%`;
-  }
-  if (segment.origin === "mt") return "MT";
-  if (segment.origin === "user") return "Confirmed";
-  if (segment.translationMemorySuggestion)
-    return `Memory ${Math.round(segment.translationMemoryScore ?? 0)}%`;
-  return null;
-}
-
 export default function Translate() {
   const { fileId } = useParams();
   const navigate = useNavigate();
   const [fileName, setFileName] = useState("");
   const [sourceLanguage, setSourceLanguage] = useState("en");
   const [targetLanguage, setTargetLanguage] = useState("es");
+  const [activeSlide, setActiveSlide] = useState(0);
+  const [activeSegmentId, setActiveSegmentId] = useState<string | null>(null);
+  const [slideLayouts, setSlideLayouts] = useState<SlideLayout[]>([]);
+  const [imageUrls, setImageUrls] = useState<Map<string, string>>(new Map());
+  const [fileType, setFileType] = useState("");
   const fileDataRef = useRef<{ data: Uint8Array; ext: string } | null>(null);
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const { segments, setSegments, isTranslating, error, translate, cancel } =
     useTranslation();
 
@@ -85,10 +74,16 @@ export default function Translate() {
           : new Uint8Array(file.data as ArrayBuffer);
       const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
       fileDataRef.current = { data, ext };
+      setFileType(ext);
 
       const rawSegments = await extractSegments(data, ext);
 
-      // Check translation memory for each segment
+      if (ext === "pptx") {
+        const result = await extractVisualLayout(data, ext);
+        setSlideLayouts(result.layouts);
+        setImageUrls(result.imageUrls);
+      }
+
       const processed: Segment[] = await Promise.all(
         rawSegments.map(async (segment) => {
           const match = await findTranslationMemoryMatch(
@@ -125,6 +120,13 @@ export default function Translate() {
     loadFile();
   }, [fileId, navigate, sourceLanguage, targetLanguage, setSegments]);
 
+  // Revoke blob URLs on cleanup
+  useEffect(() => {
+    return () => {
+      revokeImageUrls(imageUrls);
+    };
+  }, [imageUrls]);
+
   const handleTranslate = useCallback(() => {
     translate(segments, sourceLanguage, targetLanguage);
   }, [segments, sourceLanguage, targetLanguage, translate]);
@@ -151,6 +153,38 @@ export default function Translate() {
       );
     },
     [segments, sourceLanguage, targetLanguage, setSegments],
+  );
+
+  const handleTargetChange = useCallback(
+    (segmentId: string, value: string) => {
+      setSegments((prev) =>
+        prev.map((s) =>
+          s.id === segmentId ? { ...s, target: value } : s,
+        ),
+      );
+    },
+    [setSegments],
+  );
+
+  const handleSegmentClick = useCallback(
+    (segmentId: string) => {
+      setActiveSegmentId(segmentId);
+      // Find which slide this segment belongs to
+      for (const layout of slideLayouts) {
+        const found = layout.regions.some(
+          (region) => region.segmentId === segmentId,
+        );
+        if (found) {
+          setActiveSlide(
+            slideLayouts.findIndex(
+              (l) => l.slideIndex === layout.slideIndex,
+            ),
+          );
+          break;
+        }
+      }
+    },
+    [slideLayouts],
   );
 
   const handleDownload = useCallback(async () => {
@@ -200,18 +234,18 @@ export default function Translate() {
     return { total, translated, confirmed };
   }, [segments]);
 
-  const virtualizer = useVirtualizer({
-    count: segments.length,
-    getScrollElement: () => scrollContainerRef.current,
-    estimateSize: () => 64,
-    overscan: 10,
-  });
+  const activeSegment = activeSegmentId
+    ? segments.find((s) => s.id === activeSegmentId) ?? null
+    : null;
+
+  const hasCanvas = slideLayouts.length > 0;
+  const currentLayout = slideLayouts[activeSlide];
 
   return (
-    <main className="min-h-screen">
+    <div className="h-screen flex flex-col">
       {/* Header */}
-      <header className="border-b border-gray-200 dark:border-gray-800 px-4 py-3">
-        <div className="flex items-center justify-between max-w-6xl mx-auto">
+      <header className="shrink-0 border-b border-gray-200 dark:border-gray-800 px-4 py-2">
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Button
               onPress={() => navigate("/")}
@@ -219,7 +253,13 @@ export default function Translate() {
             >
               &larr; Back
             </Button>
-            <span className="font-medium">{fileName}</span>
+            <span className="font-medium text-sm">{fileName}</span>
+            {stats.total > 0 && (
+              <span className="text-xs text-gray-500">
+                {stats.translated}/{stats.total} translated &middot;{" "}
+                {stats.confirmed} confirmed
+              </span>
+            )}
           </div>
 
           <div className="flex items-center gap-3">
@@ -268,139 +308,82 @@ export default function Translate() {
           </div>
         </div>
 
-        {/* Progress bar */}
-        {stats.total > 0 && (
-          <div className="max-w-6xl mx-auto mt-2">
-            <div className="flex gap-2 text-xs text-gray-500">
-              <span>
-                {stats.translated}/{stats.total} translated
-              </span>
-              <span>&middot;</span>
-              <span>{stats.confirmed} confirmed</span>
-            </div>
-            <div className="w-full bg-gray-200 dark:bg-gray-800 rounded-full h-1 mt-1">
-              <div
-                className="bg-green-500 h-1 rounded-full transition-all"
-                style={{
-                  width: `${stats.total > 0 ? (stats.translated / stats.total) * 100 : 0}%`,
-                }}
-              />
-            </div>
+        {/* Slide tabs */}
+        {hasCanvas && slideLayouts.length > 1 && (
+          <div className="flex gap-1 mt-2">
+            {slideLayouts.map((layout, index) => (
+              <button
+                key={layout.slideIndex}
+                type="button"
+                onClick={() => setActiveSlide(index)}
+                className={`px-2.5 py-0.5 text-xs rounded cursor-pointer transition-colors ${
+                  index === activeSlide
+                    ? "bg-gray-900 text-white dark:bg-white dark:text-gray-900"
+                    : "text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800"
+                }`}
+              >
+                {index + 1}
+              </button>
+            ))}
           </div>
         )}
       </header>
 
-      {/* Error message */}
+      {/* Error */}
       {error && (
-        <div className="max-w-6xl mx-auto px-4 pt-3">
+        <div className="shrink-0 px-4 py-2">
           <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
         </div>
       )}
 
-      {/* Segment grid */}
-      <div className="max-w-6xl mx-auto p-4">
-        {segments.length === 0 ? (
-          <p className="text-center text-gray-400 py-12">
-            No translatable segments found.
-          </p>
-        ) : (
-          <div className="border rounded-lg dark:border-gray-800">
-            {/* Column headers */}
-            <div className="grid grid-cols-[auto_1fr_1fr_auto] gap-4 px-4 py-2 text-xs font-medium text-gray-500 uppercase border-b dark:border-gray-800">
-              <span className="w-8">#</span>
-              <span>Source</span>
-              <span>Target</span>
-              <span className="w-20">Status</span>
-            </div>
+      {/* Three-panel layout */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Left sidebar - outline */}
+        <div className="w-56 shrink-0 border-r dark:border-gray-800 overflow-hidden">
+          <OutlineSidebar
+            segments={segments}
+            layouts={slideLayouts}
+            fileType={fileType}
+            activeSegmentId={activeSegmentId}
+            onSegmentClick={handleSegmentClick}
+          />
+        </div>
 
-            <div
-              ref={scrollContainerRef}
-              className="overflow-auto"
-              style={{ height: "calc(100vh - 200px)" }}
-            >
-              <div
-                style={{
-                  height: `${virtualizer.getTotalSize()}px`,
-                  position: "relative",
-                }}
-              >
-                {virtualizer.getVirtualItems().map((virtualRow) => {
-                  const segment = segments[virtualRow.index];
-                  return (
-                    <div
-                      key={segment.id}
-                      data-index={virtualRow.index}
-                      ref={virtualizer.measureElement}
-                      className={`grid grid-cols-[auto_1fr_1fr_auto] gap-4 px-4 py-3 border-b dark:border-gray-800 ${getMatchColor(segment)}`}
-                      style={{
-                        position: "absolute",
-                        top: 0,
-                        left: 0,
-                        width: "100%",
-                        transform: `translateY(${virtualRow.start}px)`,
-                      }}
-                    >
-                      <span className="w-8 text-xs text-gray-400 pt-1">
-                        {virtualRow.index + 1}
-                      </span>
-                      <p className="text-sm">{segment.source}</p>
-                      <div className="flex flex-col gap-1">
-                        {segment.translationMemorySuggestion &&
-                          !segment.target && (
-                            <p className="text-xs text-yellow-600 italic">
-                              Memory suggestion:{" "}
-                              {segment.translationMemorySuggestion}
-                            </p>
-                          )}
-                        <input
-                          type="text"
-                          value={segment.target ?? ""}
-                          onChange={(e) => {
-                            const value = e.target.value;
-                            setSegments((prev) =>
-                              prev.map((s) =>
-                                s.id === segment.id
-                                  ? { ...s, target: value }
-                                  : s,
-                              ),
-                            );
-                          }}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" && segment.target) {
-                              handleConfirm(segment.id, segment.target);
-                            }
-                          }}
-                          placeholder="Translation..."
-                          className="w-full text-sm border rounded px-2 py-1 bg-transparent dark:border-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                        />
-                      </div>
-                      <div className="w-20 flex items-start">
-                        {getMatchLabel(segment) && (
-                          <span
-                            className={`text-xs px-2 py-0.5 rounded-full ${
-                              segment.origin === "user" ||
-                              (
-                                segment.origin === "translationMemory" &&
-                                  (segment.translationMemoryScore ?? 0) >= 95
-                              )
-                                ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
-                                : segment.origin === "mt"
-                                  ? "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"
-                                  : "bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300"
-                            }`}
-                          >
-                            {getMatchLabel(segment)}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+        {/* Center - canvas */}
+        <div className="flex-1 overflow-auto bg-gray-100 dark:bg-gray-900">
+          {segments.length === 0 ? (
+            <div className="flex items-center justify-center h-full">
+              <p className="text-gray-400">No translatable segments found.</p>
             </div>
-          </div>
-        )}
+          ) : hasCanvas && currentLayout ? (
+            <SlideCanvas
+              layout={currentLayout}
+              segments={segments}
+              activeSegmentId={activeSegmentId}
+              onSegmentFocus={setActiveSegmentId}
+              onTargetChange={handleTargetChange}
+              onConfirm={handleConfirm}
+              imageUrls={imageUrls}
+            />
+          ) : (
+            <SegmentListEditor
+              segments={segments}
+              activeSegmentId={activeSegmentId}
+              onSegmentFocus={setActiveSegmentId}
+              onTargetChange={handleTargetChange}
+              onConfirm={handleConfirm}
+            />
+          )}
+        </div>
+
+        {/* Right sidebar - inspector */}
+        <div className="w-60 shrink-0 border-l dark:border-gray-800 bg-gray-50 dark:bg-gray-950">
+          <InspectorPanel
+            segment={activeSegment}
+            onConfirm={handleConfirm}
+          />
+        </div>
       </div>
-    </main>
+    </div>
   );
 }

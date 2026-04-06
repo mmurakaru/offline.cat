@@ -6,6 +6,15 @@
     "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
 }
 
+.tiptap p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  display: block;
+  color: #9ca3af;
+  opacity: 0.6;
+  pointer-events: none;
+  height: 0;
+}
+
 html,
 body {
   @apply bg-white dark:bg-gray-950;

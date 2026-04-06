@@ -9,8 +9,11 @@ import {
   extractSegments as extractHtml,
   reconstructHtml,
 } from "../lib/parsers/html";
+import { unzipSync } from "fflate";
 import {
+  extractPptxLayout,
   extractSegments as extractPptx,
+  extractSlideImages,
   reconstructPptx,
 } from "../lib/parsers/pptx";
 import {
@@ -20,6 +23,8 @@ import {
 
 export type ParserRequest =
   | { action: "extract"; data: Uint8Array; ext: string }
+  | { action: "extractLayout"; data: Uint8Array; ext: string }
+  | { action: "extractVisualLayout"; data: Uint8Array; ext: string }
   | {
       action: "reconstruct";
       data: Uint8Array;
@@ -31,8 +36,75 @@ self.addEventListener("message", (event: MessageEvent<ParserRequest>) => {
   const request = event.data;
 
   if (request.action === "extract") {
-    const segments = extractByFormat(request.data, request.ext);
+    const data =
+      request.data instanceof Uint8Array
+        ? request.data
+        : new Uint8Array(request.data as ArrayBuffer);
+    const segments = extractByFormat(data, request.ext);
     self.postMessage({ action: "extract", segments });
+    return;
+  }
+
+  if (request.action === "extractLayout") {
+    try {
+      const data =
+        request.data instanceof Uint8Array
+          ? request.data
+          : new Uint8Array(request.data as ArrayBuffer);
+      const result =
+        request.ext === "pptx" ? extractPptxLayout(data) : { layouts: [], mediaPaths: [] };
+      self.postMessage({ action: "extractLayout", layouts: result.layouts });
+    } catch (error) {
+      console.error("extractLayout error:", error);
+      self.postMessage({ action: "extractLayout", layouts: [] });
+    }
+    return;
+  }
+
+  if (request.action === "extractVisualLayout") {
+    try {
+      const data =
+        request.data instanceof Uint8Array
+          ? request.data
+          : new Uint8Array(request.data as ArrayBuffer);
+
+      if (request.ext !== "pptx") {
+        self.postMessage({
+          action: "extractVisualLayout",
+          layouts: [],
+          images: [],
+        });
+        return;
+      }
+
+      const { layouts, mediaPaths } = extractPptxLayout(data);
+      const files = unzipSync(data);
+      const images = extractSlideImages(files, mediaPaths);
+
+      const transferBuffers: ArrayBuffer[] = images.map(
+        (img) => img.bytes.buffer as ArrayBuffer,
+      );
+
+      self.postMessage(
+        {
+          action: "extractVisualLayout",
+          layouts,
+          images: images.map((img) => ({
+            mediaPath: img.mediaPath,
+            bytes: img.bytes,
+            contentType: img.contentType,
+          })),
+        },
+        { transfer: transferBuffers },
+      );
+    } catch (error) {
+      console.error("extractVisualLayout error:", error);
+      self.postMessage({
+        action: "extractVisualLayout",
+        layouts: [],
+        images: [],
+      });
+    }
     return;
   }
 

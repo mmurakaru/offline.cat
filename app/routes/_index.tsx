@@ -102,6 +102,21 @@ export default function Home() {
         </a>{" "}
         first.
       </p>
+
+      {import.meta.env.DEV && (
+        <button
+          type="button"
+          onClick={async () => {
+            const db = await getDB();
+            await db.execute("DELETE FROM translation_memory");
+            await db.execute("DELETE FROM files");
+            alert("Database cleared.");
+          }}
+          className="text-xs text-red-400 hover:text-red-600 underline cursor-pointer"
+        >
+          [DEV] Clear database
+        </button>
+      )}
     </main>
   );
 }
