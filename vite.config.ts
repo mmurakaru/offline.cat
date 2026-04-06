@@ -3,6 +3,17 @@ import tailwindcss from "@tailwindcss/vite";
 import type { Plugin } from "vite";
 import { defineConfig } from "vite";
 
+const coopCoepHeaders = (): Plugin => ({
+  name: "coop-coep",
+  configureServer(server) {
+    server.middlewares.use((_req, res, next) => {
+      res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
+      res.setHeader("Cross-Origin-Embedder-Policy", "require-corp");
+      next();
+    });
+  },
+});
+
 const serviceWorkerManifest = (): Plugin => ({
   name: "sw-manifest",
   generateBundle(_, bundle) {
@@ -18,8 +29,19 @@ const serviceWorkerManifest = (): Plugin => ({
 });
 
 export default defineConfig({
-  plugins: [tailwindcss(), reactRouter(), serviceWorkerManifest()],
+  plugins: [
+    coopCoepHeaders(),
+    tailwindcss(),
+    reactRouter(),
+    serviceWorkerManifest(),
+  ],
   resolve: {
     tsconfigPaths: true,
+  },
+  worker: {
+    format: "es",
+  },
+  optimizeDeps: {
+    exclude: ["@sqlite.org/sqlite-wasm"],
   },
 });

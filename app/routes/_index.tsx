@@ -25,13 +25,10 @@ export default function Home() {
       const buffer = await file.arrayBuffer();
       const id = crypto.randomUUID();
       const db = await getDB();
-      await db.put("files", {
-        id,
-        name: file.name,
-        type: file.type,
-        data: new Uint8Array(buffer),
-        createdAt: Date.now(),
-      });
+      await db.execute(
+        "INSERT INTO files (id, name, type, data, created_at) VALUES (?, ?, ?, ?, ?)",
+        [id, file.name, file.type, new Uint8Array(buffer), Date.now()],
+      );
 
       navigate(`/translate/${id}`);
     },

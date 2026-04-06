@@ -1,4 +1,4 @@
-import type { TranslationMemoryEntry } from "./db";
+import type { TranslationMemoryRecord } from "./db";
 import { getDB } from "./db";
 
 export interface TranslationMemoryMatch {
@@ -55,31 +55,33 @@ export function similarity(source: string, target: string): number {
 
 export async function findTranslationMemoryMatch(
   source: string,
-  langPair: string,
+  sourceLocale: string,
+  targetLocale: string,
 ): Promise<TranslationMemoryMatch> {
   const db = await getDB();
   const normalized = normalize(source);
   const tokens = tokenize(normalized);
-  const allEntries = await db.getAllFromIndex(
-    "translationMemory",
-    "langPair",
-    langPair,
+
+  const allEntries = await db.query<TranslationMemoryRecord>(
+    "SELECT * FROM translation_memory WHERE source_locale = ? AND target_locale = ?",
+    [sourceLocale, targetLocale],
   );
 
   let bestMatch: TranslationMemoryMatch = { score: 0, translation: "" };
 
   // Pre-filter by token overlap before expensive Levenshtein
   const candidates = allEntries.filter((entry) => {
+    const entryTokens: string[] = JSON.parse(entry.source_tokens);
     const overlap = tokens.filter((token) =>
-      entry.sourceTokens.includes(token),
+      entryTokens.includes(token),
     ).length;
     return tokens.length === 0 || overlap / tokens.length > 0.3;
   });
 
   for (const entry of candidates) {
-    const score = similarity(normalized, entry.sourceNormalized);
+    const score = similarity(normalized, entry.source_normalized);
     if (score > bestMatch.score) {
-      bestMatch = { score, translation: entry.target };
+      bestMatch = { score, translation: entry.target_text };
     }
   }
 
@@ -89,19 +91,31 @@ export async function findTranslationMemoryMatch(
 export async function addTranslationMemoryEntry(
   source: string,
   target: string,
-  langPair: string,
+  sourceLocale: string,
+  targetLocale: string,
+  changeSource: string = "HUMAN",
 ): Promise<void> {
   const db = await getDB();
   const sourceNormalized = normalize(source);
   const sourceTokens = tokenize(sourceNormalized);
+  const now = Date.now();
 
-  await db.put("translationMemory", {
-    id: crypto.randomUUID(),
-    source,
-    sourceNormalized,
-    sourceTokens,
-    target,
-    langPair,
-    createdAt: Date.now(),
-  });
+  await db.execute(
+    `INSERT INTO translation_memory (id, source_text, source_normalized, source_tokens, target_text, source_locale, target_locale, change_source, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+     ON CONFLICT(source_locale, target_locale, source_normalized)
+     DO UPDATE SET target_text = excluded.target_text, change_source = excluded.change_source, updated_at = excluded.updated_at`,
+    [
+      crypto.randomUUID(),
+      source,
+      sourceNormalized,
+      JSON.stringify(sourceTokens),
+      target,
+      sourceLocale,
+      targetLocale,
+      changeSource,
+      now,
+      now,
+    ],
+  );
 }

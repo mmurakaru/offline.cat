@@ -3,6 +3,7 @@ import { Button } from "react-aria-components";
 import { useNavigate, useParams } from "react-router";
 import type { Segment } from "../hooks/useTranslation";
 import { useTranslation } from "../hooks/useTranslation";
+import type { FileRecord } from "../lib/db";
 import { getDB } from "../lib/db";
 import { extractSegments, reconstructFile } from "../lib/parser-client";
 import {
@@ -61,11 +62,14 @@ export default function Translate() {
   const { segments, setSegments, isTranslating, error, translate, cancel } =
     useTranslation();
 
-  // Load file from IndexedDB
+  // Load file from SQLite
   useEffect(() => {
     const loadFile = async () => {
       const db = await getDB();
-      const file = await db.get("files", fileId!);
+      const file = await db.getOne<FileRecord>(
+        "SELECT * FROM files WHERE id = ?",
+        [fileId!],
+      );
       if (!file) {
         navigate("/");
         return;
@@ -73,19 +77,22 @@ export default function Translate() {
 
       setFileName(file.name);
 
-      const data = file.data;
+      const data =
+        file.data instanceof Uint8Array
+          ? file.data
+          : new Uint8Array(file.data as ArrayBuffer);
       const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
       fileDataRef.current = { data, ext };
 
       const rawSegments = await extractSegments(data, ext);
 
       // Check translation memory for each segment
-      const langPair = `${sourceLanguage}-${targetLanguage}`;
       const processed: Segment[] = await Promise.all(
         rawSegments.map(async (segment) => {
           const match = await findTranslationMemoryMatch(
             segment.source,
-            langPair,
+            sourceLanguage,
+            targetLanguage,
           );
 
           if (match.score >= 95) {
@@ -125,8 +132,13 @@ export default function Translate() {
       const segment = segments.find((s) => s.id === segmentId);
       if (!segment) return;
 
-      const langPair = `${sourceLanguage}-${targetLanguage}`;
-      await addTranslationMemoryEntry(segment.source, translation, langPair);
+      await addTranslationMemoryEntry(
+        segment.source,
+        translation,
+        sourceLanguage,
+        targetLanguage,
+        "HUMAN",
+      );
 
       setSegments((prev) =>
         prev.map((s) =>
