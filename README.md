@@ -15,11 +15,6 @@ Requires Chrome 138+ with [on-device language packs](chrome://on-device-translat
 
 Future consideration: hybrid mode where users can optionally bring their own model (cloud API or local) for higher quality output, while the built-in model remains the zero-config default.
 
-## Docs
-
-- [React Router](https://reactrouter.com/)
-- [SQLite Wasm](https://sqlite.org/wasm/doc/trunk/index.md)
-
 ## Built-in APIs
 
 - [Translation API](https://github.com/webmachinelearning/translation-api) - document translation
@@ -28,6 +23,11 @@ Future consideration: hybrid mode where users can optionally bring their own mod
 - [Proofreader API](https://github.com/webmachinelearning/proofreader-api) - grammar and spelling checks *(future)*
 - [Prompt API](https://github.com/webmachinelearning/prompt-api) - free-form language model access *(future)*
 - [Web Speech API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Speech_API) - voice dictation *(future)*
+
+## Docs
+
+- [React Router](https://reactrouter.com/)
+- [SQLite Wasm](https://sqlite.org/wasm/doc/trunk/index.md)
 
 ## Getting started
 
