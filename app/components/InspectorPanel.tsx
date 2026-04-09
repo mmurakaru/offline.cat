@@ -1,5 +1,6 @@
 import { Button } from "react-aria-components";
 import type { Segment } from "../hooks/useTranslation";
+import { cn } from "../lib/cn";
 
 interface InspectorPanelProps {
   segment: Segment | null;
@@ -45,7 +46,7 @@ export function InspectorPanel({ segment, onConfirm }: InspectorPanelProps) {
       {badge && (
         <div>
           <span
-            className={`text-xs px-2 py-0.5 rounded-full ${badge.className}`}
+            className={cn("text-xs px-2 py-0.5 rounded-full", badge.className)}
           >
             {badge.label}
           </span>

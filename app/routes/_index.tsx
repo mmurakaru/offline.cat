@@ -1,6 +1,7 @@
 import { useCallback, useState } from "react";
 import { Button, DropZone, FileTrigger, Text } from "react-aria-components";
 import { useNavigate } from "react-router";
+import { cn } from "../lib/cn";
 import { getDB } from "../lib/db";
 
 const ACCEPTED_TYPES = [".pptx", ".docx", ".html", ".htm", ".xliff", ".xlf"];
@@ -70,11 +71,12 @@ export default function Home() {
         onDropEnter={() => setIsDragging(true)}
         onDropExit={() => setIsDragging(false)}
         onDrop={onDrop}
-        className={`w-full max-w-lg border-2 border-dashed rounded-xl p-12 text-center transition-colors ${
+        className={cn(
+          "w-full max-w-lg border-2 border-dashed rounded-xl p-12 text-center transition-colors",
           isDragging
             ? "border-blue-500 bg-blue-50 dark:bg-blue-950"
-            : "border-gray-300 dark:border-gray-700"
-        }`}
+            : "border-gray-300 dark:border-gray-700",
+        )}
       >
         <div className="flex flex-col items-center gap-4">
           <Text

@@ -3,10 +3,11 @@ import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { useCallback, useEffect, useRef } from "react";
 import type { Segment } from "../hooks/useTranslation";
+import { cn } from "../lib/cn";
 import type {
+  SlideBackground,
   SlideLayout,
   VisualShape,
-  SlideBackground,
 } from "../lib/parser-client";
 
 interface SlideCanvasProps {
@@ -95,13 +96,7 @@ function ShapeRenderer({
   if (shape.image) {
     const url = imageUrls?.get(shape.image.mediaPath);
     if (url) {
-      return (
-        <img
-          src={url}
-          alt=""
-          style={{ ...style, objectFit: "cover" }}
-        />
-      );
+      return <img src={url} alt="" style={{ ...style, objectFit: "cover" }} />;
     }
   }
 
@@ -211,13 +206,14 @@ function TextBoxEditor({
   return (
     <div
       ref={editorRef}
-      className={`absolute overflow-hidden transition-shadow rounded-sm ${
+      className={cn(
+        "absolute overflow-hidden transition-shadow rounded-sm",
         isActive
           ? "ring-2 ring-blue-500"
           : isConfirmed
             ? "ring-1 ring-green-400/50"
-            : "ring-1 ring-gray-300/40 hover:ring-blue-300"
-      }`}
+            : "ring-1 ring-gray-300/40 hover:ring-blue-300",
+      )}
       style={{
         left: `${x * scale}px`,
         top: `${y * scale}px`,
@@ -227,10 +223,7 @@ function TextBoxEditor({
         zIndex: isActive ? 1000 : zIndex,
       }}
     >
-      <EditorContent
-        editor={editor}
-        className="h-full p-1 cursor-text"
-      />
+      <EditorContent editor={editor} className="h-full p-1 cursor-text" />
       {isConfirmed && !isActive && (
         <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-green-500 rounded-full border border-white dark:border-gray-900" />
       )}

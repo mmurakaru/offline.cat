@@ -3,6 +3,7 @@ import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { useEffect } from "react";
 import type { Segment } from "../hooks/useTranslation";
+import { cn } from "../lib/cn";
 
 interface SegmentEditorRowProps {
   segment: Segment;
@@ -66,19 +67,21 @@ function SegmentEditorRow({
 
   return (
     <div
-      className={`grid grid-cols-[1fr_1fr] gap-4 px-4 py-2 border-b dark:border-gray-800 transition-colors ${
-        isActive ? "bg-blue-50/50 dark:bg-blue-950/20" : ""
-      }`}
+      className={cn(
+        "grid grid-cols-[1fr_1fr] gap-4 px-4 py-2 border-b dark:border-gray-800 transition-colors",
+        isActive && "bg-blue-50/50 dark:bg-blue-950/20",
+      )}
     >
       <p className="text-sm text-gray-600 dark:text-gray-400 py-1.5">
         {segment.source}
       </p>
       <div
-        className={`rounded border transition-colors ${
+        className={cn(
+          "rounded border transition-colors",
           isActive
             ? "border-blue-500 dark:border-blue-400"
-            : "border-transparent hover:border-gray-300 dark:hover:border-gray-600"
-        }`}
+            : "border-transparent hover:border-gray-300 dark:hover:border-gray-600",
+        )}
       >
         <EditorContent editor={editor} className="cursor-text" />
       </div>
