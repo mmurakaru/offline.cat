@@ -27,6 +27,7 @@ export async function isTranslatorAvailable(
   targetLanguage: string,
 ): Promise<boolean> {
   if (typeof Translator === "undefined") return false;
+  if (!sourceLanguage || !targetLanguage) return false;
 
   const availability = await Translator.availability({
     sourceLanguage,
@@ -46,6 +47,10 @@ export async function translateSegments(
     throw new Error(
       "Translator API not available. Requires Chrome 138+ with language packs installed.",
     );
+  }
+
+  if (!sourceLanguage || !targetLanguage) {
+    throw new Error("Source and target languages must be selected.");
   }
 
   const translator = await Translator.create({

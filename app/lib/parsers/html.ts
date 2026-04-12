@@ -1,27 +1,53 @@
 export interface ExtractedSegment {
   id: string;
   source: string;
-  nodePath: string;
 }
 
+const SKIP_TAGS = /^(script|style|noscript)$/i;
+const TAG_REGEX = /<(\/?)([a-zA-Z][a-zA-Z0-9]*)\b[^>]*\/?>/g;
+
 export function extractSegments(html: string): ExtractedSegment[] {
-  const doc = new DOMParser().parseFromString(html, "text/html");
   const segments: ExtractedSegment[] = [];
-  const walker = doc.createTreeWalker(doc.body, NodeFilter.SHOW_TEXT);
-
   let index = 0;
-  let node = walker.nextNode();
+  let lastIndex = 0;
+  let skipDepth = 0;
+  let skipTag = "";
 
-  while (node) {
-    const text = node.textContent?.trim();
-    if (text) {
-      segments.push({
-        id: `html-${index++}`,
-        source: text,
-        nodePath: getNodePath(node),
-      });
+  TAG_REGEX.lastIndex = 0;
+  let match = TAG_REGEX.exec(html);
+
+  while (match) {
+    const textBefore = html.slice(lastIndex, match.index);
+
+    if (skipDepth === 0) {
+      const trimmed = textBefore.trim();
+      if (trimmed) {
+        segments.push({ id: `html-${index++}`, source: trimmed });
+      }
     }
-    node = walker.nextNode();
+
+    const isClosing = match[1] === "/";
+    const tagName = match[2];
+
+    if (SKIP_TAGS.test(tagName)) {
+      if (isClosing) {
+        if (tagName.toLowerCase() === skipTag) skipDepth--;
+      } else {
+        if (skipDepth === 0) skipTag = tagName.toLowerCase();
+        skipDepth++;
+      }
+    }
+
+    lastIndex = match.index + match[0].length;
+    match = TAG_REGEX.exec(html);
+  }
+
+  // Text after the last tag
+  if (skipDepth === 0) {
+    const trailing = html.slice(lastIndex).trim();
+    if (trailing) {
+      segments.push({ id: `html-${index++}`, source: trailing });
+    }
   }
 
   return segments;
@@ -31,39 +57,65 @@ export function reconstructHtml(
   html: string,
   translations: Map<string, string>,
 ): string {
-  const doc = new DOMParser().parseFromString(html, "text/html");
-  const walker = doc.createTreeWalker(doc.body, NodeFilter.SHOW_TEXT);
-
   let index = 0;
-  let node = walker.nextNode();
+  let lastIndex = 0;
+  let skipDepth = 0;
+  let skipTag = "";
+  const parts: string[] = [];
 
-  while (node) {
-    const text = node.textContent?.trim();
-    if (text) {
+  TAG_REGEX.lastIndex = 0;
+  let match = TAG_REGEX.exec(html);
+
+  while (match) {
+    const textBefore = html.slice(lastIndex, match.index);
+
+    if (skipDepth === 0 && textBefore.trim()) {
       const id = `html-${index++}`;
       const translation = translations.get(id);
       if (translation) {
-        node.textContent = translation;
+        // Preserve leading/trailing whitespace from original
+        const leadingWs = textBefore.match(/^\s*/)?.[0] ?? "";
+        const trailingWs = textBefore.match(/\s*$/)?.[0] ?? "";
+        parts.push(leadingWs + translation + trailingWs);
+      } else {
+        parts.push(textBefore);
+      }
+    } else {
+      parts.push(textBefore);
+    }
+
+    const isClosing = match[1] === "/";
+    const tagName = match[2];
+
+    if (SKIP_TAGS.test(tagName)) {
+      if (isClosing) {
+        if (tagName.toLowerCase() === skipTag) skipDepth--;
+      } else {
+        if (skipDepth === 0) skipTag = tagName.toLowerCase();
+        skipDepth++;
       }
     }
-    node = walker.nextNode();
+
+    parts.push(match[0]);
+    lastIndex = match.index + match[0].length;
+    match = TAG_REGEX.exec(html);
   }
 
-  return doc.documentElement.outerHTML;
-}
-
-function getNodePath(node: Node): string {
-  const parts: string[] = [];
-  let current: Node | null = node;
-
-  while (current && current !== current.ownerDocument) {
-    if (current.parentNode) {
-      const children = Array.from(current.parentNode.childNodes);
-      const index = children.indexOf(current as ChildNode);
-      parts.unshift(`${current.nodeName}[${index}]`);
+  // Trailing text after last tag
+  const trailing = html.slice(lastIndex);
+  if (skipDepth === 0 && trailing.trim()) {
+    const id = `html-${index++}`;
+    const translation = translations.get(id);
+    if (translation) {
+      const leadingWs = trailing.match(/^\s*/)?.[0] ?? "";
+      const trailingWs = trailing.match(/\s*$/)?.[0] ?? "";
+      parts.push(leadingWs + translation + trailingWs);
+    } else {
+      parts.push(trailing);
     }
-    current = current.parentNode;
+  } else {
+    parts.push(trailing);
   }
 
-  return parts.join("/");
+  return parts.join("");
 }

@@ -1,3 +1,7 @@
+import Placeholder from "@tiptap/extension-placeholder";
+import { EditorContent, useEditor } from "@tiptap/react";
+import StarterKit from "@tiptap/starter-kit";
+import { useEffect } from "react";
 import type { Segment } from "../hooks/useTranslation";
 import { cn } from "../lib/cn";
 import type { SlideLayout } from "../lib/parser-client";
@@ -7,14 +11,112 @@ interface OutlineSidebarProps {
   layouts: SlideLayout[];
   fileType: string;
   activeSegmentId: string | null;
-  onSegmentClick: (segmentId: string) => void;
+  onSegmentFocus: (segmentId: string) => void;
+  onTargetChange: (segmentId: string, value: string) => void;
+  onConfirm: (segmentId: string, translation: string) => void;
 }
 
 function getStatusColor(segment: Segment): string {
   if (segment.origin === "user") return "bg-green-500";
   if (segment.origin === "translationMemory") return "bg-green-400";
-  if (segment.origin === "mt") return "bg-gray-400";
-  return "bg-gray-300 dark:bg-gray-700";
+  if (segment.origin === "ai") return "bg-grey-6";
+  return "bg-grey-4 dark:bg-ui-divider";
+}
+
+function SegmentRow({
+  segment,
+  isActive,
+  onFocus,
+  onContentChange,
+  onConfirm,
+}: {
+  segment: Segment;
+  isActive: boolean;
+  onFocus: () => void;
+  onContentChange: (value: string) => void;
+  onConfirm: (value: string) => void;
+}) {
+  const editor = useEditor({
+    extensions: [
+      StarterKit.configure({
+        heading: false,
+        bulletList: false,
+        orderedList: false,
+        blockquote: false,
+        codeBlock: false,
+        horizontalRule: false,
+      }),
+      Placeholder.configure({
+        placeholder: "Click to translate...",
+      }),
+    ],
+    content: segment.target ?? "",
+    editorProps: {
+      attributes: {
+        class: "outline-none text-xs px-1.5 py-1 min-h-[24px]",
+      },
+      handleKeyDown: (_view, event) => {
+        if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
+          const text = editor?.getText() ?? "";
+          if (text) onConfirm(text);
+          return true;
+        }
+        return false;
+      },
+    },
+    onUpdate: ({ editor: currentEditor }) => {
+      onContentChange(currentEditor.getText());
+    },
+    onFocus: () => {
+      onFocus();
+    },
+  });
+
+  useEffect(() => {
+    if (!editor) return;
+    const currentText = editor.getText();
+    const newText = segment.target ?? "";
+    if (currentText !== newText && !editor.isFocused) {
+      editor.commands.setContent(newText);
+    }
+  }, [editor, segment.target]);
+
+  return (
+    <div
+      className={cn(
+        "px-2 py-1.5 rounded transition-colors",
+        isActive
+          ? "bg-primary-5/15 dark:bg-primary-9/30"
+          : "hover:bg-grey-3 dark:hover:bg-grey-23",
+      )}
+    >
+      <button
+        type="button"
+        onClick={onFocus}
+        className="flex items-start gap-2 w-full text-left cursor-pointer"
+      >
+        <span
+          className={cn(
+            "mt-1 w-1.5 h-1.5 rounded-full shrink-0",
+            getStatusColor(segment),
+          )}
+        />
+        <p className="text-xs text-grey-9 dark:text-grey-4 line-clamp-2">
+          {segment.source}
+        </p>
+      </button>
+      <div
+        className={cn(
+          "mt-1 ml-3.5 rounded border transition-colors",
+          isActive
+            ? "border-primary-5 dark:border-primary-4"
+            : "border-transparent hover:border-grey-4 dark:hover:border-grey-10",
+        )}
+      >
+        <EditorContent editor={editor} className="cursor-text" />
+      </div>
+    </div>
+  );
 }
 
 export function OutlineSidebar({
@@ -22,7 +124,9 @@ export function OutlineSidebar({
   layouts,
   fileType,
   activeSegmentId,
-  onSegmentClick,
+  onSegmentFocus,
+  onTargetChange,
+  onConfirm,
 }: OutlineSidebarProps) {
   const segmentMap = new Map(segments.map((segment) => [segment.id, segment]));
 
@@ -41,35 +145,24 @@ export function OutlineSidebar({
   const groupLabel = fileType === "pptx" ? "Slide" : "Page";
 
   return (
-    <div className="h-full overflow-y-auto bg-gray-50 dark:bg-gray-950">
+    <div className="h-full overflow-y-auto no-scrollbar bg-grey-1 dark:bg-ui-app-background scroll-fade">
       <div className="p-2">
         {groups.map((group) => (
           <div key={group.slideIndex} className="mb-3">
             {groups.length > 1 && (
-              <div className="px-2 py-1 text-xs font-medium text-gray-500 uppercase">
+              <div className="px-2 py-1 text-xs font-medium text-grey-7 uppercase">
                 {groupLabel} {group.slideIndex + 1}
               </div>
             )}
             {group.segments.map((segment) => (
-              <button
+              <SegmentRow
                 key={segment.id}
-                type="button"
-                onClick={() => onSegmentClick(segment.id)}
-                className={cn(
-                  "w-full text-left px-2 py-1.5 rounded text-xs cursor-pointer transition-colors flex items-start gap-2",
-                  activeSegmentId === segment.id
-                    ? "bg-blue-100 dark:bg-blue-900/30 text-blue-900 dark:text-blue-100"
-                    : "hover:bg-gray-100 dark:hover:bg-gray-900 text-gray-700 dark:text-gray-300",
-                )}
-              >
-                <span
-                  className={cn(
-                    "mt-1 w-1.5 h-1.5 rounded-full shrink-0",
-                    getStatusColor(segment),
-                  )}
-                />
-                <span className="line-clamp-2">{segment.source}</span>
-              </button>
+                segment={segment}
+                isActive={activeSegmentId === segment.id}
+                onFocus={() => onSegmentFocus(segment.id)}
+                onContentChange={(value) => onTargetChange(segment.id, value)}
+                onConfirm={(value) => onConfirm(segment.id, value)}
+              />
             ))}
           </div>
         ))}

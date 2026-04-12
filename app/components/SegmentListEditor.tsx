@@ -68,19 +68,19 @@ function SegmentEditorRow({
   return (
     <div
       className={cn(
-        "grid grid-cols-[1fr_1fr] gap-4 px-4 py-2 border-b dark:border-gray-800 transition-colors",
-        isActive && "bg-blue-50/50 dark:bg-blue-950/20",
+        "grid grid-cols-[1fr_1fr] gap-4 px-4 py-2 transition-colors",
+        isActive && "bg-primary-5/10 dark:bg-primary-10/20",
       )}
     >
-      <p className="text-sm text-gray-600 dark:text-gray-400 py-1.5">
+      <p className="text-sm text-grey-8 dark:text-grey-6 py-1.5">
         {segment.source}
       </p>
       <div
         className={cn(
           "rounded border transition-colors",
           isActive
-            ? "border-blue-500 dark:border-blue-400"
-            : "border-transparent hover:border-gray-300 dark:hover:border-gray-600",
+            ? "border-primary-5 dark:border-primary-4"
+            : "border-transparent hover:border-grey-4 dark:hover:border-grey-10",
         )}
       >
         <EditorContent editor={editor} className="cursor-text" />
@@ -106,21 +106,23 @@ export function SegmentListEditor({
 }: SegmentListEditorProps) {
   return (
     <div className="max-w-4xl mx-auto py-4">
-      <div className="border rounded-lg dark:border-gray-800 bg-white dark:bg-gray-950">
-        <div className="grid grid-cols-[1fr_1fr] gap-4 px-4 py-2 text-xs font-medium text-gray-500 uppercase border-b dark:border-gray-800">
+      <div className="border border-grey-3 rounded-lg dark:border-grey-14 bg-grey-1 dark:bg-ui-app-background">
+        <div className="grid grid-cols-[1fr_1fr] gap-4 px-4 py-2 text-xs font-medium text-grey-7 uppercase border-b border-grey-3 dark:border-grey-14">
           <span>Source</span>
           <span>Translation</span>
         </div>
-        {segments.map((segment) => (
-          <SegmentEditorRow
-            key={segment.id}
-            segment={segment}
-            isActive={activeSegmentId === segment.id}
-            onFocus={() => onSegmentFocus(segment.id)}
-            onContentChange={(value) => onTargetChange(segment.id, value)}
-            onConfirm={(value) => onConfirm(segment.id, value)}
-          />
-        ))}
+        <div className="divide-y divide-grey-3 dark:divide-grey-14">
+          {segments.map((segment) => (
+            <SegmentEditorRow
+              key={segment.id}
+              segment={segment}
+              isActive={activeSegmentId === segment.id}
+              onFocus={() => onSegmentFocus(segment.id)}
+              onContentChange={(value) => onTargetChange(segment.id, value)}
+              onConfirm={(value) => onConfirm(segment.id, value)}
+            />
+          ))}
+        </div>
       </div>
     </div>
   );

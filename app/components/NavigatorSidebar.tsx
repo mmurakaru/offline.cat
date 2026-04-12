@@ -19,7 +19,7 @@ export function NavigatorSidebar({
   onSlideClick,
 }: NavigatorSidebarProps) {
   return (
-    <div className="h-full overflow-y-auto bg-gray-50 dark:bg-gray-950">
+    <div className="h-full overflow-y-auto no-scrollbar bg-grey-1 dark:bg-ui-app-background scroll-fade">
       <div className="p-2 flex flex-col gap-2">
         {layouts.map((layout, index) => (
           <button
@@ -27,8 +27,8 @@ export function NavigatorSidebar({
             type="button"
             onClick={() => onSlideClick(index)}
             className={cn(
-              "flex items-end gap-2 cursor-pointer group rounded-r-lg rounded-tl-[14px_12px] rounded-bl-[14px_12px] px-1 py-1 transition-colors duration-200",
-              index === activeSlide && "bg-blue-500 dark:bg-blue-500",
+              "flex items-end gap-2 cursor-pointer group rounded-r-lg rounded-tl-2xl rounded-bl-2xl [corner-shape:squircle] px-1 py-1 transition-colors duration-200",
+              index === activeSlide && "bg-primary-5 dark:bg-primary-5",
             )}
           >
             <span
@@ -36,7 +36,7 @@ export function NavigatorSidebar({
                 "text-xs font-medium pb-0.5 w-5 text-right shrink-0",
                 index === activeSlide
                   ? "text-white"
-                  : "text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300",
+                  : "text-grey-6 group-hover:text-grey-8 dark:group-hover:text-grey-4",
               )}
             >
               {index + 1}
@@ -45,7 +45,7 @@ export function NavigatorSidebar({
               className={cn(
                 "rounded overflow-hidden shadow-sm",
                 index !== activeSlide &&
-                  "ring-1 ring-gray-200 dark:ring-gray-700",
+                  "ring-1 ring-grey-3 dark:ring-ui-divider",
               )}
             >
               <SlideThumbnail

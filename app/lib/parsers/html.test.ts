@@ -1,4 +1,3 @@
-// @vitest-environment jsdom
 import { describe, expect, it } from "vitest";
 import { extractSegments, reconstructHtml } from "./html";
 
@@ -76,5 +75,41 @@ describe("reconstructHtml", () => {
     // Assert
     expect(result).toContain("Hola");
     expect(result).toContain("World");
+  });
+});
+
+describe("roundtrip", () => {
+  it("extract then reconstruct preserves structure and applies translations", () => {
+    const html = "<h1>Title</h1><p>Body text</p>";
+    const segments = extractSegments(html);
+
+    const translations = new Map(
+      segments.map((s) => [s.id, `translated-${s.source}`]),
+    );
+    const result = reconstructHtml(html, translations);
+
+    expect(result).toContain("translated-Title");
+    expect(result).toContain("translated-Body text");
+    expect(result).toContain("<h1>");
+    expect(result).toContain("<p>");
+  });
+
+  it("does not extract text from script or style tags", () => {
+    const html =
+      "<p>Visible</p><script>var x = 1;</script><style>.a { color: red; }</style><p>Also visible</p>";
+    const segments = extractSegments(html);
+
+    expect(segments.map((s) => s.source)).toEqual(["Visible", "Also visible"]);
+  });
+
+  it("preserves HTML attributes through roundtrip", () => {
+    const html = '<a href="https://example.com" class="link">Click me</a>';
+    extractSegments(html);
+    const translations = new Map([["html-0", "Haz clic"]]);
+    const result = reconstructHtml(html, translations);
+
+    expect(result).toContain('href="https://example.com"');
+    expect(result).toContain('class="link"');
+    expect(result).toContain("Haz clic");
   });
 });

@@ -1,10 +1,5 @@
-import { useCallback, useState } from "react";
-import { Button, DropZone, FileTrigger, Text } from "react-aria-components";
-import { useNavigate } from "react-router";
-import { cn } from "../lib/cn";
-import { getDB } from "../lib/db";
-
-const ACCEPTED_TYPES = [".pptx", ".docx", ".html", ".htm", ".xliff", ".xlf"];
+import { Link } from "react-router";
+import { OfflineIcon } from "../components/offline-icon";
 
 export function meta() {
   return [
@@ -18,107 +13,27 @@ export function meta() {
 }
 
 export default function Home() {
-  const navigate = useNavigate();
-  const [isDragging, setIsDragging] = useState(false);
-
-  const handleFile = useCallback(
-    async (file: File) => {
-      const buffer = await file.arrayBuffer();
-      const id = crypto.randomUUID();
-      const db = await getDB();
-      await db.execute(
-        "INSERT INTO files (id, name, type, data, created_at) VALUES (?, ?, ?, ?, ?)",
-        [id, file.name, file.type, new Uint8Array(buffer), Date.now()],
-      );
-
-      navigate(`/translate/${id}`);
-    },
-    [navigate],
-  );
-
-  const onSelect = useCallback(
-    (files: FileList | null) => {
-      const file = files?.item(0);
-      if (file) handleFile(file);
-    },
-    [handleFile],
-  );
-
-  const onDrop = useCallback(
-    async (e: {
-      items: Array<{ kind: string; getFile?: () => Promise<File> }>;
-    }) => {
-      setIsDragging(false);
-      const item = e.items.find((i) => i.kind === "file");
-      if (item?.getFile) {
-        const file = await item.getFile();
-        handleFile(file);
-      }
-    },
-    [handleFile],
-  );
-
   return (
-    <main className="flex flex-col items-center justify-center min-h-screen gap-8 p-4">
-      <div className="text-center space-y-2">
-        <h1 className="text-4xl font-bold">offline.cat</h1>
-        <p className="text-gray-500">
-          Translate documents offline. No servers. No accounts. No exceptions.
-        </p>
+    <main className="relative flex flex-col items-center justify-center min-h-screen p-4">
+      <div className="absolute top-4 left-4">
+        <OfflineIcon className="w-9 bg-black dark:bg-white" />
       </div>
 
-      <DropZone
-        onDropEnter={() => setIsDragging(true)}
-        onDropExit={() => setIsDragging(false)}
-        onDrop={onDrop}
-        className={cn(
-          "w-full max-w-lg border-2 border-dashed rounded-xl p-12 text-center transition-colors",
-          isDragging
-            ? "border-blue-500 bg-blue-50 dark:bg-blue-950"
-            : "border-gray-300 dark:border-gray-700",
-        )}
-      >
-        <div className="flex flex-col items-center gap-4">
-          <Text
-            slot="label"
-            className="text-lg text-gray-600 dark:text-gray-400"
-          >
-            Drop a file here
-          </Text>
-          <p className="text-sm text-gray-400">PPTX, DOCX, HTML, XLIFF</p>
-          <FileTrigger onSelect={onSelect} acceptedFileTypes={ACCEPTED_TYPES}>
-            <Button className="px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-100 transition-colors cursor-pointer">
-              Browse files
-            </Button>
-          </FileTrigger>
-        </div>
-      </DropZone>
+      <h1 className="text-5xl sm:text-6xl md:text-7xl font-bold text-center tracking-tight max-w-3xl">
+        AI translations without leaving your device
+      </h1>
 
-      <p className="text-xs text-gray-400">
-        For offline usage,{" "}
-        <a
-          href="chrome://on-device-translation-internals/"
-          className="underline hover:text-gray-600 dark:hover:text-gray-300"
-        >
-          download required language packs
-        </a>{" "}
-        first.
+      <p className="mt-6 text-lg text-grey-7 text-center max-w-md">
+        Privacy-first document translation powered by on-device AI. Works
+        offline and completely free.
       </p>
 
-      {import.meta.env.DEV && (
-        <button
-          type="button"
-          onClick={async () => {
-            const db = await getDB();
-            await db.execute("DELETE FROM translation_memory");
-            await db.execute("DELETE FROM files");
-            alert("Database cleared.");
-          }}
-          className="text-xs text-red-400 hover:text-red-600 underline cursor-pointer"
-        >
-          [DEV] Clear database
-        </button>
-      )}
+      <Link
+        to="/create"
+        className="mt-8 px-5 py-2.5 bg-grey-25 text-grey-1 rounded-lg hover:bg-grey-23 dark:bg-grey-1 dark:text-grey-25 dark:hover:bg-grey-3 transition-colors"
+      >
+        Start translating
+      </Link>
     </main>
   );
 }
