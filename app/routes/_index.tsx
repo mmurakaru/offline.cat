@@ -20,7 +20,8 @@ export default function Home() {
       </div>
 
       <h1 className="text-5xl sm:text-6xl md:text-7xl font-bold text-center tracking-tight max-w-3xl">
-        AI translations without leaving your device
+        <span className="ai-highlight">AI translations</span> without leaving
+        your device
       </h1>
 
       <p className="mt-6 text-lg text-grey-7 text-center max-w-md">

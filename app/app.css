@@ -142,3 +142,21 @@ body {
     color-scheme: dark;
   }
 }
+
+.ai-highlight {
+  --highlight-color: #5e6ad2;
+  --highlight-opacity: 0.3;
+  --highlight-height: 0.5;
+  --highlight-offset: -0.08;
+  background-image: linear-gradient(
+    to bottom,
+    transparent 42%,
+    rgba(94, 106, 210, 0.18) 42%
+  );
+}
+
+@supports (background: paint(id)) {
+  .ai-highlight {
+    background-image: paint(header-highlight);
+  }
+}
