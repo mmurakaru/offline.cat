@@ -26,14 +26,6 @@ export function InspectorPanel({ segment, onConfirm }: InspectorPanelProps) {
   const isConfirmed = segment.origin === "user";
   const isAi = segment.origin === "ai";
 
-  if (!hasFuzzyMatch && !hasAppliedTm && !isConfirmed && !isAi) {
-    return (
-      <div className="h-full flex items-center justify-center p-4 text-xs text-grey-6">
-        No matches
-      </div>
-    );
-  }
-
   return (
     <div className="h-full overflow-y-auto p-3 space-y-4">
       {/* TM fuzzy match - actionable */}
@@ -93,6 +85,12 @@ export function InspectorPanel({ segment, onConfirm }: InspectorPanelProps) {
           </span>
         </div>
       )}
+
+      {/* Glossary */}
+      <div>
+        <span className="text-xs font-medium text-grey-7">Glossary</span>
+        <p className="text-xs text-grey-6 mt-1">No glossary entries</p>
+      </div>
     </div>
   );
 }

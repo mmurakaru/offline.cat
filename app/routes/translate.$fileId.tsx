@@ -190,11 +190,11 @@ export default function Translate() {
   const [fileType, setFileType] = useState("");
   const [sidebarMode, setSidebarMode] = useState<SidebarMode>("navigator");
   const [isDownloading, setIsDownloading] = useState(false);
+  const [inspectorOpen, setInspectorOpen] = useState(true);
   const [zoomPercent, setZoomPercent] = useState<number | "fit">("fit");
   const [resetViewKey, setResetViewKey] = useState(0);
   const fileDataRef = useRef<{ data: Uint8Array; ext: string } | null>(null);
-  const { segments, setSegments, isTranslating, translate } =
-    useTranslation();
+  const { segments, setSegments, isTranslating, translate } = useTranslation();
 
   // Load file from SQLite
   useEffect(() => {
@@ -397,8 +397,11 @@ export default function Translate() {
     setZoomPercent,
     onResetView: () => setResetViewKey((k) => k + 1),
     onSegmentClick: handleSegmentClick,
+    onDeselect: () => setActiveSegmentId(null),
     onConfirm: handleConfirm,
     onTranslate: handleTranslate,
+    onSidebarModeChange: setSidebarMode,
+    onToggleInspector: () => setInspectorOpen((open) => !open),
   });
 
   const stats = useMemo(() => {
@@ -627,9 +630,14 @@ export default function Translate() {
           </div>
 
           {/* Right sidebar - inspector */}
-          <div className="w-60 shrink-0 border-l border-grey-3 dark:border-grey-14 bg-grey-1 dark:bg-ui-app-background">
-            <InspectorPanel segment={activeSegment} onConfirm={handleConfirm} />
-          </div>
+          {inspectorOpen && (
+            <div className="w-60 shrink-0 border-l border-grey-3 dark:border-grey-14 bg-grey-1 dark:bg-ui-app-background">
+              <InspectorPanel
+                segment={activeSegment}
+                onConfirm={handleConfirm}
+              />
+            </div>
+          )}
         </div>
       </div>
     </div>

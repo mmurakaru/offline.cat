@@ -17,7 +17,7 @@ Replace the segment grid with a Keynote/Pages-inspired document canvas editor. T
 Every CAT tool extracts translatable segments into a table. The translator works in a spreadsheet-like grid, disconnected from the document's visual layout. This means:
 
 - No spatial context - you can't see where text lives in the document
-- No overflow feedback - you don't know if a translation is too long until you export
+- No length awareness - you don't know if a translation fits until you export
 - No document structure - slides, pages, and headings are flattened into rows
 - Context is limited to "the row above and below"
 
@@ -114,7 +114,7 @@ The editing experience requires features that go beyond plain `contentEditable`:
 - **Inline node views** - glossary term highlights, XLIFF placeholder tags, and TM match indicators rendered as custom React components within the text flow
 - **Schema enforcement** - translators can't accidentally merge paragraphs, delete structural elements, or break the document model
 - **Controlled undo/redo** - per-editor-instance history that doesn't leak across segments
-- **Decorations** - highlight the active segment, show overflow warnings, mark unconfirmed text, all without modifying the document content
+- **Decorations** - highlight the active segment, mark unconfirmed text, all without modifying the document content
 - **Paste handling** - strip unwanted formatting, preserve only text
 
 For plain text segments, Tiptap adds minimal overhead. For segments with inline tags, glossary highlights, or slash commands, it's the difference between a robust editor and a brittle `contentEditable` hack.
@@ -144,8 +144,6 @@ The slash command palette appears as a floating menu anchored to the cursor posi
 
 **Confirmation model** - translations auto-save as drafts. Explicit confirmation (`/confirm`, or a keyboard shortcut like `Cmd+Enter`) saves to TM and marks the segment as confirmed. This separates "I'm still typing" from "this translation is final." Unconfirmed translations are still used for file reconstruction but don't pollute the TM.
 
-**Overflow feedback** - for PPTX (fixed-size text boxes), show a subtle visual indicator when the translated text exceeds the box dimensions. Not a hard block - just awareness. The text box could show a gentle amber outline or a small overflow icon. Measured in real-time as you type by comparing rendered text height against the box height.
-
 **Format-specific editing behavior:**
 
 | Format | Cursor behavior |
@@ -163,8 +161,7 @@ Context panel that appears when a segment is active. Source text is not shown he
 - TM matches and suggestions (clickable to insert)
 - Match type badge (ICE, exact, fuzzy %, MT)
 - Glossary terms that appear in the source (clickable to insert)
-- Segment metadata (word count, character count vs box capacity for PPTX)
-- Overflow indicator for fixed-size text boxes
+- Segment metadata (word count, character count)
 
 Auto-shows when you place your cursor in a text region, auto-hides when you click away. Can be pinned open or fully collapsed.
 
@@ -420,7 +417,6 @@ Tiptap is MIT-licensed, works offline (no server dependency), and tree-shakes we
 
 - **Slide master resolution**: How much effort to resolve placeholder positions from slide layouts/masters? Is fallback positioning acceptable for v1?
 - **Font rendering**: Should we attempt to match the document's fonts, or use a system font and accept the difference?
-- **Overflow detection**: Should overflow warnings be real-time (as you type) or on-confirm? Tiptap decorations can measure rendered text against box dimensions on every transaction.
 - **DOCX page breaks**: Accurate page break calculation requires a layout engine. Is approximate "content height / page height" sufficient, or do we need something more precise?
 - **Tiptap bundle size**: Tiptap with starter-kit + suggestion + placeholder is ~50-80KB gzipped. Acceptable given the value it provides? Measure after integration.
 - **Web Speech API browser support**: `/voice` dictation depends on the [Web Speech API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Speech_API) which has inconsistent support (Chrome is good, Firefox partial, Safari limited). Should it be a progressive enhancement that only shows in the slash menu when available?

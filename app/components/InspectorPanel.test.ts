@@ -30,12 +30,13 @@ describe("InspectorPanel", () => {
     expect(container.textContent).toContain("Select a segment");
   });
 
-  it("shows no matches when segment has no TM or origin", () => {
+  it("shows glossary placeholder when segment has no TM or origin", () => {
     const segment: Segment = { id: "1", source: "Hello" };
     const container = renderToContainer(
       createElement(InspectorPanel, { segment, onConfirm }),
     );
-    expect(container.textContent).toContain("No matches");
+    expect(container.textContent).toContain("Glossary");
+    expect(container.textContent).toContain("No glossary entries");
   });
 
   it("shows TM suggestion with score and Apply button for fuzzy matches", () => {

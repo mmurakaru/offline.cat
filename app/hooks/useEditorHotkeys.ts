@@ -9,8 +9,11 @@ interface EditorHotkeysOptions {
   setZoomPercent: Dispatch<SetStateAction<number | "fit">>;
   onResetView: () => void;
   onSegmentClick: (segmentId: string) => void;
+  onDeselect: () => void;
   onConfirm: (segmentId: string, translation: string) => void;
   onTranslate: () => void;
+  onSidebarModeChange: (mode: "navigator" | "outline") => void;
+  onToggleInspector: () => void;
 }
 
 export function useEditorHotkeys({
@@ -20,8 +23,11 @@ export function useEditorHotkeys({
   setZoomPercent,
   onResetView,
   onSegmentClick,
+  onDeselect,
   onConfirm,
   onTranslate,
+  onSidebarModeChange,
+  onToggleInspector,
 }: EditorHotkeysOptions) {
   // Zoom in
   useHotkey({ key: "=", mod: true }, () => {
@@ -45,18 +51,40 @@ export function useEditorHotkeys({
     onResetView();
   });
 
-  // Previous segment
+  // Previous segment (Arrow Up)
   useHotkey({ key: "ArrowUp" }, () => {
     if (!activeSegmentId) return;
     const index = segments.findIndex((s) => s.id === activeSegmentId);
     if (index > 0) onSegmentClick(segments[index - 1].id);
   });
 
-  // Next segment
+  // Next segment (Arrow Down)
   useHotkey({ key: "ArrowDown" }, () => {
     if (!activeSegmentId) return;
     const index = segments.findIndex((s) => s.id === activeSegmentId);
     if (index < segments.length - 1) onSegmentClick(segments[index + 1].id);
+  });
+
+  // Next segment (Tab)
+  useHotkey({ key: "Tab" }, () => {
+    if (!activeSegmentId && segments.length > 0) {
+      onSegmentClick(segments[0].id);
+      return;
+    }
+    const index = segments.findIndex((s) => s.id === activeSegmentId);
+    if (index < segments.length - 1) onSegmentClick(segments[index + 1].id);
+  });
+
+  // Previous segment (Shift+Tab)
+  useHotkey({ key: "Tab", shift: true }, () => {
+    if (!activeSegmentId) return;
+    const index = segments.findIndex((s) => s.id === activeSegmentId);
+    if (index > 0) onSegmentClick(segments[index - 1].id);
+  });
+
+  // Deselect active segment
+  useHotkey({ key: "Escape" }, () => {
+    onDeselect();
   });
 
   // Confirm translation
@@ -71,5 +99,20 @@ export function useEditorHotkeys({
   // Translate all
   useHotkey({ key: "Enter", shift: true }, () => {
     if (!isTranslating) onTranslate();
+  });
+
+  // Switch sidebar to navigator
+  useHotkey({ key: "1", mod: true }, () => {
+    onSidebarModeChange("navigator");
+  });
+
+  // Switch sidebar to outline
+  useHotkey({ key: "2", mod: true }, () => {
+    onSidebarModeChange("outline");
+  });
+
+  // Toggle inspector panel
+  useHotkey({ key: "\\", mod: true }, () => {
+    onToggleInspector();
   });
 }
