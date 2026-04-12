@@ -9,6 +9,7 @@ import {
 } from "react-aria-components";
 import { Link, useNavigate, useParams } from "react-router";
 import { ArrowRightIcon } from "../components/arrow-right-icon";
+import { MyToastRegion, queue } from "../components/ToastRegion";
 import { DownloadIcon } from "../components/download-icon";
 import { InspectorPanel } from "../components/InspectorPanel";
 import { LoadingIcon } from "../components/loading-icon";
@@ -290,8 +291,9 @@ export default function Translate() {
     };
   }, [imageUrls]);
 
-  const handleTranslate = useCallback(() => {
-    translate(segments, sourceLanguage, targetLanguage);
+  const handleTranslate = useCallback(async () => {
+    await translate(segments, sourceLanguage, targetLanguage);
+    queue.add({ title: "Translation complete" }, { timeout: 5000 });
   }, [segments, sourceLanguage, targetLanguage, translate]);
 
   const handleTranslateSegment = useCallback(
@@ -672,6 +674,7 @@ export default function Translate() {
           )}
         </div>
       </div>
+      <MyToastRegion />
     </div>
   );
 }
