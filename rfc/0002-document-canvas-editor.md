@@ -382,11 +382,11 @@ Tiptap is MIT-licensed, works offline (no server dependency), and tree-shakes we
 - Custom Tiptap node views for glossary term highlights in translated text
 - Confirmation model (draft vs confirmed translations)
 
-### Phase 3: DOCX + HTML editors
+### Phase 3: DOCX + HTML editors (done)
 
-- DOCX: one Tiptap instance for the document, paragraphs as nodes with segment IDs
-- HTML: source HTML fed into Tiptap, structural elements as read-only node views
-- Page thumbnails in sidebar navigator for DOCX
+- DOCX: one Tiptap instance for the document, paragraphs as custom nodes with segment IDs, styling from `w:rPr`/`w:pPr`, page dimensions from `w:sectPr`, inline image rendering via relationship parsing
+- HTML: native iframe rendering with contenteditable spans. The browser handles all CSS layout (flexbox, grid, media queries) natively. A preprocessor annotates translatable text with `data-segment-id` spans, which are made editable via `contentEditable` with input/focus listeners for segment tracking.
+- Page thumbnails in sidebar navigator for DOCX (deferred to polish pass)
 
 ### Phase 4: XLIFF inline tags
 

@@ -86,11 +86,7 @@ export function InspectorPanel({ segment, onConfirm }: InspectorPanelProps) {
         </div>
       )}
 
-      {/* Glossary */}
-      <div>
-        <span className="text-xs font-medium text-grey-7">Glossary</span>
-        <p className="text-xs text-grey-6 mt-1">No glossary entries</p>
-      </div>
+      {/* TODO: Glossary - add when glossary DB infra is built */}
     </div>
   );
 }

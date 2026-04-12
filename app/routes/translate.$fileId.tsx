@@ -7,11 +7,20 @@ import {
   ListBoxItem,
   Popover,
 } from "react-aria-components";
-import { Link, useNavigate, useParams } from "react-router";
+import {
+  isRouteErrorResponse,
+  Link,
+  useNavigate,
+  useParams,
+} from "react-router";
 import { ArrowRightIcon } from "../components/arrow-right-icon";
-import { MyToastRegion, queue } from "../components/ToastRegion";
+import { ConfirmDialog } from "../components/ConfirmDialog";
+import { DocumentCanvas } from "../components/DocumentCanvas";
 import { DownloadIcon } from "../components/download-icon";
+import { ErrorIcon } from "../components/error-icon";
+import { HtmlCanvas } from "../components/HtmlCanvas";
 import { InspectorPanel } from "../components/InspectorPanel";
+import { InspectorToggleIcon } from "../components/inspector-toggle-icon";
 import { LoadingIcon } from "../components/loading-icon";
 import { NavigatorSidebar } from "../components/NavigatorSidebar";
 import { OutlineSidebar } from "../components/OutlineSidebar";
@@ -23,6 +32,7 @@ import {
   SidebarViewToggle,
 } from "../components/SidebarViewToggle";
 import { SlideCanvas } from "../components/SlideCanvas";
+import { MyToastRegion, queue } from "../components/ToastRegion";
 import { TranslateIcon } from "../components/translate-icon";
 import { useEditorHotkeys } from "../hooks/useEditorHotkeys";
 import type { Segment } from "../hooks/useTranslation";
@@ -31,8 +41,9 @@ import { cn } from "../lib/cn";
 import type { FileRecord } from "../lib/db";
 import { getDB } from "../lib/db";
 import { detectLanguage } from "../lib/language-detector";
-import { translateSegments } from "../lib/translator";
 import {
+  type DocxDocumentLayout,
+  extractDocxLayoutFromWorker,
   extractSegments,
   extractVisualLayout,
   reconstructFile,
@@ -43,9 +54,17 @@ import {
   addTranslationMemoryEntry,
   findTranslationMemoryMatch,
 } from "../lib/translation-memory";
+import { translateSegments } from "../lib/translator";
 
 export function meta() {
-  return [{ title: "Translate - offline.cat" }];
+  return [
+    { title: "Translate - offline.cat" },
+    {
+      name: "description",
+      content:
+        "Translate documents offline. No servers. No accounts. No exceptions.",
+    },
+  ];
 }
 
 const LANGUAGES: Record<string, string> = {
@@ -153,6 +172,80 @@ function getTargetLanguages(sourceLanguage: string) {
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 
+function LeftSidebarCollapsedNav({
+  fileType,
+  activeIndex,
+  count,
+  onClickIndex,
+}: {
+  fileType: string;
+  activeIndex: number;
+  count: number;
+  onClickIndex: (index: number) => void;
+}) {
+  if (count <= 0) return null;
+
+  return (
+    <div className="flex-1 overflow-y-auto no-scrollbar scroll-fade">
+      <div className="flex flex-col items-center gap-1 px-1 pt-1">
+        {Array.from({ length: count }, (_, index) => (
+          <button
+            key={index}
+            type="button"
+            onClick={() => onClickIndex(index)}
+            className={cn(
+              "w-9 h-9 flex items-center justify-center rounded-lg text-xs font-bold leading-none cursor-pointer transition-colors shrink-0",
+              index === activeIndex
+                ? "bg-primary-5 text-white"
+                : "text-grey-6 hover:text-grey-8 dark:hover:text-grey-4 hover:bg-grey-3 dark:hover:bg-grey-15",
+            )}
+            title={`${fileType === "pptx" ? "Slide" : "Page"} ${index + 1}`}
+          >
+            {index + 1}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function InspectorCollapsedIcons({ segment }: { segment: Segment | null }) {
+  if (!segment) return null;
+
+  const label =
+    segment.origin === "translationMemory"
+      ? "TM"
+      : segment.origin === "ai"
+        ? "AI"
+        : segment.origin === "user"
+          ? "\u2713"
+          : null;
+
+  const colorClass =
+    segment.origin === "user"
+      ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
+      : segment.origin === "translationMemory"
+        ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
+        : segment.origin === "ai"
+          ? "bg-grey-3 text-grey-8 dark:bg-grey-15 dark:text-grey-6"
+          : "";
+
+  if (!label) return null;
+
+  return (
+    <div className="flex flex-col items-center gap-1.5 pt-1">
+      <span
+        className={cn(
+          "w-6 h-6 flex items-center justify-center rounded text-[9px] font-bold leading-none",
+          colorClass,
+        )}
+      >
+        {label}
+      </span>
+    </div>
+  );
+}
+
 function getFileTypeBadge(filename: string): {
   label: string;
   className: string;
@@ -188,11 +281,13 @@ export default function Translate() {
   const [activeSlide, setActiveSlide] = useState(0);
   const [activeSegmentId, setActiveSegmentId] = useState<string | null>(null);
   const [slideLayouts, setSlideLayouts] = useState<SlideLayout[]>([]);
+  const [docxLayout, setDocxLayout] = useState<DocxDocumentLayout | null>(null);
+  const [rawHtml, setRawHtml] = useState<string>("");
   const [imageUrls, setImageUrls] = useState<Map<string, string>>(new Map());
   const [fileType, setFileType] = useState("");
-  const [sidebarMode, setSidebarMode] = useState<SidebarMode>("navigator");
+  const [sidebarMode, setSidebarMode] = useState<SidebarMode>("outline");
   const [isDownloading, setIsDownloading] = useState(false);
-  const [inspectorOpen, setInspectorOpen] = useState(true);
+  const [inspectorOpen, setInspectorOpen] = useState(false);
   const [zoomPercent, setZoomPercent] = useState<number | "fit">("fit");
   const [resetViewKey, setResetViewKey] = useState(0);
   const fileDataRef = useRef<{ data: Uint8Array; ext: string } | null>(null);
@@ -219,7 +314,10 @@ export default function Translate() {
           : new Uint8Array(file.data as ArrayBuffer);
       const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
       fileDataRef.current = { data, ext };
-      setFileType(ext);
+      if (fileType !== ext) {
+        setFileType(ext);
+        if (ext === "pptx") setSidebarMode("navigator");
+      }
 
       const rawSegments = await extractSegments(data, ext);
 
@@ -246,6 +344,12 @@ export default function Translate() {
         const result = await extractVisualLayout(data, ext);
         setSlideLayouts(result.layouts);
         setImageUrls(result.imageUrls);
+      } else if (ext === "docx") {
+        const result = await extractDocxLayoutFromWorker(data);
+        setDocxLayout(result.layout);
+        setImageUrls(result.imageUrls);
+      } else if (ext === "html" || ext === "htm") {
+        setRawHtml(new TextDecoder().decode(data));
       }
 
       const processed: Segment[] = await Promise.all(
@@ -281,8 +385,10 @@ export default function Translate() {
       setSegments(processed);
     };
 
-    loadFile();
-  }, [fileId, navigate, sourceLanguage, targetLanguage, setSegments]);
+    loadFile().catch((error) => {
+      console.error("Failed to load file:", error);
+    });
+  }, [fileId, navigate, sourceLanguage, targetLanguage, setSegments, fileType]);
 
   // Revoke blob URLs on cleanup
   useEffect(() => {
@@ -454,7 +560,25 @@ export default function Translate() {
     [slideLayouts],
   );
 
-  const hasCanvas = slideLayouts.length > 0;
+  const _hasCanvas =
+    slideLayouts.length > 0 || docxLayout !== null || rawHtml !== "";
+
+  // Count pages/slides for the collapsed left sidebar nav
+  const docxPageCount = useMemo(() => {
+    if (!docxLayout) return 0;
+    let count = 1;
+    for (const block of docxLayout.blocks) {
+      if (block.type === "pageBreak") count++;
+    }
+    return count;
+  }, [docxLayout]);
+
+  const collapsedNavCount =
+    fileType === "pptx"
+      ? slideLayouts.length
+      : fileType === "docx"
+        ? docxPageCount
+        : 0;
   const currentLayout = slideLayouts[activeSlide];
 
   const fileTypeBadge = getFileTypeBadge(fileName);
@@ -464,36 +588,52 @@ export default function Translate() {
 
   return (
     <div className="h-screen flex">
-      {/* Left sidebar - full height */}
-      <div className="w-56 shrink-0 border-r border-grey-3 dark:border-grey-14 overflow-hidden flex flex-col">
-        <div className="flex items-center px-4 py-2 shrink-0">
-          <Link to="/" className="inline-flex items-center justify-center h-8">
-            <OfflineIcon className="w-8 bg-black dark:bg-white" />
+      {/* Left sidebar - collapses in preview mode */}
+      <div
+        className="left-sidebar shrink-0 border-r border-grey-3 dark:border-grey-14 flex flex-col"
+        {...(sidebarMode === "preview" && { "data-collapsed": "" })}
+      >
+        <div className="py-2 px-1 shrink-0">
+          <Link
+            to="/"
+            className="inline-flex items-center justify-center h-9 w-9 shrink-0"
+          >
+            <OfflineIcon className="w-9 bg-black dark:bg-white" />
           </Link>
         </div>
-        <div className="flex-1 overflow-hidden">
-          {hasCanvas && sidebarMode === "navigator" ? (
-            <NavigatorSidebar
-              layouts={slideLayouts}
-              segments={segments}
-              activeSlide={activeSlide}
-              imageUrls={imageUrls}
-              onSlideClick={handleSlideClick}
-            />
-          ) : (
-            <OutlineSidebar
-              segments={segments}
-              layouts={slideLayouts}
-              fileType={fileType}
-              activeSegmentId={activeSegmentId}
-              onSegmentFocus={handleSegmentClick}
-              onTargetChange={handleTargetChange}
-              onConfirm={handleConfirm}
-              onTranslateSegment={handleTranslateSegment}
-              canTranslate={!!sourceLanguage && !!targetLanguage}
-            />
-          )}
-        </div>
+        {sidebarMode === "preview" ? (
+          <LeftSidebarCollapsedNav
+            fileType={fileType}
+            activeIndex={activeSlide}
+            count={collapsedNavCount}
+            onClickIndex={handleSlideClick}
+          />
+        ) : (
+          <div className="flex-1 overflow-hidden">
+            {sidebarMode === "navigator" && slideLayouts.length > 0 ? (
+              <NavigatorSidebar
+                layouts={slideLayouts}
+                segments={segments}
+                activeSlide={activeSlide}
+                imageUrls={imageUrls}
+                onSlideClick={handleSlideClick}
+              />
+            ) : (
+              <OutlineSidebar
+                segments={segments}
+                layouts={slideLayouts}
+                docxLayout={docxLayout}
+                fileType={fileType}
+                activeSegmentId={activeSegmentId}
+                onSegmentFocus={handleSegmentClick}
+                onTargetChange={handleTargetChange}
+                onConfirm={handleConfirm}
+                onTranslateSegment={handleTranslateSegment}
+                canTranslate={!!sourceLanguage && !!targetLanguage}
+              />
+            )}
+          </div>
+        )}
       </div>
 
       {/* Right portion - header + content */}
@@ -502,19 +642,36 @@ export default function Translate() {
         <header className="shrink-0 border-b border-grey-3 dark:border-grey-14 pl-4 py-2">
           <div className="flex items-center">
             <div className="flex items-center gap-3 min-w-0">
-              {hasCanvas && (
+              {fileType !== "xliff" && fileType !== "xlf" && (
                 <SidebarViewToggle
                   mode={sidebarMode}
                   onModeChange={setSidebarMode}
+                  fileType={fileType}
                 />
               )}
-              <Button
-                onPress={() => navigate("/create")}
-                className="p-2 rounded-lg hover:bg-black/5 active:bg-black/10 dark:hover:bg-white/10 dark:active:bg-white/15 cursor-pointer text-grey-7 dark:text-grey-6 transition-colors"
-                aria-label="Back to home"
-              >
-                <PlusIcon />
-              </Button>
+              {stats.translated > 0 ? (
+                <ConfirmDialog
+                  title="Discard translations?"
+                  description="Your translation progress will be lost. The download button in the header lets you save your work first."
+                  confirmLabel="Discard & continue"
+                  onConfirm={() => navigate("/create")}
+                >
+                  <Button
+                    className="p-2 rounded-lg hover:bg-black/5 active:bg-black/10 dark:hover:bg-white/10 dark:active:bg-white/15 cursor-pointer text-grey-7 dark:text-grey-6 transition-colors"
+                    aria-label="New file"
+                  >
+                    <PlusIcon />
+                  </Button>
+                </ConfirmDialog>
+              ) : (
+                <Button
+                  onPress={() => navigate("/create")}
+                  className="p-2 rounded-lg hover:bg-black/5 active:bg-black/10 dark:hover:bg-white/10 dark:active:bg-white/15 cursor-pointer text-grey-7 dark:text-grey-6 transition-colors"
+                  aria-label="New file"
+                >
+                  <PlusIcon />
+                </Button>
+              )}
               <span className="font-medium text-sm truncate">
                 {displayName}
               </span>
@@ -621,7 +778,10 @@ export default function Translate() {
                 {isDownloading ? <LoadingIcon /> : <DownloadIcon />}
               </Button>
             </div>
-            <div className="w-60 shrink-0" />
+            <div
+              className="inspector-spacer shrink-0"
+              {...(!inspectorOpen && { "data-collapsed": "" })}
+            />
           </div>
         </header>
 
@@ -635,7 +795,7 @@ export default function Translate() {
               <div className="flex items-center justify-center h-full">
                 <p className="text-grey-6">No translatable segments found.</p>
               </div>
-            ) : hasCanvas && currentLayout ? (
+            ) : currentLayout ? (
               <SlideCanvas
                 layout={currentLayout}
                 segments={segments}
@@ -649,6 +809,32 @@ export default function Translate() {
                 zoomPercent={zoomPercent}
                 onZoomChange={setZoomPercent}
                 resetViewKey={resetViewKey}
+              />
+            ) : docxLayout ? (
+              <DocumentCanvas
+                layout={docxLayout}
+                segments={segments}
+                activeSegmentId={activeSegmentId}
+                onSegmentFocus={setActiveSegmentId}
+                onTargetChange={handleTargetChange}
+                onConfirm={handleConfirm}
+                onTranslateSegment={handleTranslateSegment}
+                canTranslate={!!sourceLanguage && !!targetLanguage}
+                imageUrls={imageUrls}
+                zoomPercent={zoomPercent}
+                onZoomChange={setZoomPercent}
+                resetViewKey={resetViewKey}
+              />
+            ) : rawHtml ? (
+              <HtmlCanvas
+                rawHtml={rawHtml}
+                segments={segments}
+                activeSegmentId={activeSegmentId}
+                onSegmentFocus={setActiveSegmentId}
+                onTargetChange={handleTargetChange}
+                onConfirm={handleConfirm}
+                onTranslateSegment={handleTranslateSegment}
+                canTranslate={!!sourceLanguage && !!targetLanguage}
               />
             ) : (
               <SegmentListEditor
@@ -664,17 +850,62 @@ export default function Translate() {
           </div>
 
           {/* Right sidebar - inspector */}
-          {inspectorOpen && (
-            <div className="w-60 shrink-0 border-l border-grey-3 dark:border-grey-14 bg-grey-1 dark:bg-ui-app-background">
-              <InspectorPanel
-                segment={activeSegment}
-                onConfirm={handleConfirm}
-              />
+          <div
+            className="inspector-sidebar shrink-0 border-l border-grey-3 dark:border-grey-14 bg-grey-1 dark:bg-ui-app-background flex flex-col"
+            {...(!inspectorOpen && { "data-collapsed": "" })}
+          >
+            <div className="flex justify-end px-2.5 py-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => setInspectorOpen((open) => !open)}
+                className="p-1 rounded-md hover:bg-black/5 active:bg-black/10 dark:hover:bg-white/10 dark:active:bg-white/15 cursor-pointer text-grey-7 dark:text-grey-6 transition-colors"
+                aria-label="Toggle inspector"
+              >
+                <InspectorToggleIcon />
+              </button>
             </div>
-          )}
+            {inspectorOpen ? (
+              <div className="flex-1 overflow-hidden min-w-60">
+                <InspectorPanel
+                  segment={activeSegment}
+                  onConfirm={handleConfirm}
+                />
+              </div>
+            ) : (
+              <InspectorCollapsedIcons segment={activeSegment} />
+            )}
+          </div>
         </div>
       </div>
       <MyToastRegion />
+    </div>
+  );
+}
+
+export function ErrorBoundary({ error }: { error: unknown }) {
+  let message = "Something went wrong while loading the file.";
+
+  if (isRouteErrorResponse(error)) {
+    message = error.statusText || message;
+  } else if (error instanceof Error) {
+    message = error.message;
+  }
+
+  return (
+    <div className="h-screen flex flex-col items-center justify-center bg-grey-1 dark:bg-ui-app-background">
+      <div className="flex flex-col items-center gap-4 max-w-md text-center">
+        <ErrorIcon className="w-8 h-8 text-grey-6" />
+        <h1 className="text-lg font-semibold text-grey-9 dark:text-grey-4">
+          Failed to load file
+        </h1>
+        <p className="text-sm text-grey-7 dark:text-grey-6">{message}</p>
+        <Link
+          to="/create"
+          className="mt-2 px-4 py-2 text-sm font-medium rounded-lg bg-primary-5 text-white hover:bg-primary-6 transition-colors"
+        >
+          Upload a new file
+        </Link>
+      </div>
     </div>
   );
 }

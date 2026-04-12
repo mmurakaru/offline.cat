@@ -1,17 +1,19 @@
 import Placeholder from "@tiptap/extension-placeholder";
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { SlashCommand } from "../extensions/slash-command";
 import { createSlashCommandSuggestion } from "../extensions/slash-command-renderer";
 import type { Segment } from "../hooks/useTranslation";
 import { cn } from "../lib/cn";
 import type { SlideLayout } from "../lib/parser-client";
+import type { DocxDocumentLayout } from "../lib/parsers/docx";
 import { startDictation } from "../lib/speech-recognition";
 
 interface OutlineSidebarProps {
   segments: Segment[];
   layouts: SlideLayout[];
+  docxLayout?: DocxDocumentLayout | null;
   fileType: string;
   activeSegmentId: string | null;
   onSegmentFocus: (segmentId: string) => void;
@@ -35,6 +37,7 @@ function SegmentRow({
   onContentChange,
   onConfirm,
   onTranslateSegment,
+  canTranslate,
 }: {
   segment: Segment;
   isActive: boolean;
@@ -45,14 +48,26 @@ function SegmentRow({
   canTranslate: boolean;
 }) {
   const editorInstanceRef = useRef<ReturnType<typeof useEditor>>(null);
-  const callbacksRef = useRef({ onContentChange, onTranslateSegment, source: segment.source, canTranslate });
-  callbacksRef.current = { onContentChange, onTranslateSegment, source: segment.source, canTranslate };
+  const callbacksRef = useRef({
+    onContentChange,
+    onTranslateSegment,
+    source: segment.source,
+    canTranslate,
+  });
+  callbacksRef.current = {
+    onContentChange,
+    onTranslateSegment,
+    source: segment.source,
+    canTranslate,
+  };
 
   const slashCommandSuggestion = useMemo(
     () =>
       createSlashCommandSuggestion({
         onInsertSource: () => {
-          editorInstanceRef.current?.commands.setContent(callbacksRef.current.source);
+          editorInstanceRef.current?.commands.setContent(
+            callbacksRef.current.source,
+          );
           callbacksRef.current.onContentChange(callbacksRef.current.source);
         },
         onTranslateSegment: () => {
@@ -160,9 +175,69 @@ function SegmentRow({
   );
 }
 
+function buildGroups(
+  segments: Segment[],
+  layouts: SlideLayout[],
+  docxLayout: DocxDocumentLayout | null | undefined,
+  fileType: string,
+): { label: string | null; segments: Segment[] }[] {
+  // PPTX: group by slide
+  if (fileType === "pptx" && layouts.length > 0) {
+    const segmentMap = new Map(
+      segments.map((segment) => [segment.id, segment]),
+    );
+    return layouts.map((layout) => ({
+      label: `Slide ${layout.slideIndex + 1}`,
+      segments: layout.regions
+        .map((region) => segmentMap.get(region.segmentId))
+        .filter(Boolean) as Segment[],
+    }));
+  }
+
+  // DOCX: group by page (split at pageBreak blocks)
+  if (fileType === "docx" && docxLayout) {
+    const pages: { label: string; segments: Segment[] }[] = [];
+    let currentSegments: Segment[] = [];
+    let pageIndex = 0;
+    const segmentMap = new Map(
+      segments.map((segment) => [segment.id, segment]),
+    );
+
+    for (const block of docxLayout.blocks) {
+      if (block.type === "pageBreak") {
+        if (currentSegments.length > 0) {
+          pages.push({
+            label: `Page ${pageIndex + 1}`,
+            segments: currentSegments,
+          });
+          currentSegments = [];
+          pageIndex++;
+        }
+      } else if (block.type === "paragraph") {
+        const segment = segmentMap.get(block.segmentId);
+        if (segment) currentSegments.push(segment);
+      }
+    }
+    // Remaining segments after last page break
+    if (currentSegments.length > 0) {
+      pages.push({ label: `Page ${pageIndex + 1}`, segments: currentSegments });
+    }
+
+    // If only one page, don't show the label
+    if (pages.length <= 1) {
+      return [{ label: null, segments }];
+    }
+    return pages;
+  }
+
+  // HTML, XLIFF, etc: flat list, no grouping
+  return [{ label: null, segments }];
+}
+
 export function OutlineSidebar({
   segments,
   layouts,
+  docxLayout,
   fileType,
   activeSegmentId,
   onSegmentFocus,
@@ -171,30 +246,42 @@ export function OutlineSidebar({
   onTranslateSegment,
   canTranslate,
 }: OutlineSidebarProps) {
-  const segmentMap = new Map(segments.map((segment) => [segment.id, segment]));
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [isScrollable, setIsScrollable] = useState(false);
 
-  // Group segments by slide
-  const slideGroups = layouts.map((layout) => ({
-    slideIndex: layout.slideIndex,
-    segments: layout.regions
-      .map((region) => segmentMap.get(region.segmentId))
-      .filter(Boolean) as Segment[],
-  }));
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
 
-  // Fallback: if no layouts, show all segments as one group
-  const groups =
-    slideGroups.length > 0 ? slideGroups : [{ slideIndex: 0, segments }];
+    const check = () => {
+      setIsScrollable(el.scrollHeight > el.clientHeight);
+    };
 
-  const groupLabel = fileType === "pptx" ? "Slide" : "Page";
+    check();
+    const observer = new ResizeObserver(check);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  const groups = useMemo(
+    () => buildGroups(segments, layouts, docxLayout, fileType),
+    [segments, layouts, docxLayout, fileType],
+  );
 
   return (
-    <div className="h-full overflow-y-auto no-scrollbar bg-grey-1 dark:bg-ui-app-background scroll-fade">
+    <div
+      ref={scrollRef}
+      className={cn(
+        "h-full overflow-y-auto no-scrollbar bg-grey-1 dark:bg-ui-app-background",
+        isScrollable && "scroll-fade",
+      )}
+    >
       <div className="p-2">
-        {groups.map((group) => (
-          <div key={group.slideIndex} className="mb-3">
-            {groups.length > 1 && (
+        {groups.map((group, groupIndex) => (
+          <div key={group.label ?? groupIndex} className="mb-3">
+            {group.label && (
               <div className="px-2 py-1 text-xs font-medium text-grey-7 uppercase">
-                {groupLabel} {group.slideIndex + 1}
+                {group.label}
               </div>
             )}
             {group.segments.map((segment) => (

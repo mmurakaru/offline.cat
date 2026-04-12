@@ -7,19 +7,36 @@ import {
 } from "react-aria-components";
 import { LayoutIcon } from "./layout-icon";
 import { NumberedListIcon } from "./numbered-list-icon";
+import { PreviewIcon } from "./preview-icon";
 import { SidebarIcon } from "./sidebar-icon";
 
-export type SidebarMode = "navigator" | "outline";
+export type SidebarMode = "navigator" | "outline" | "preview";
 
 interface SidebarViewToggleProps {
   mode: SidebarMode;
   onModeChange: (mode: SidebarMode) => void;
+  fileType: string;
+}
+
+function getPreviewLabel(fileType: string): string {
+  switch (fileType) {
+    case "pptx":
+      return "Slide Only";
+    case "docx":
+      return "Page Only";
+    default:
+      return "Preview Only";
+  }
 }
 
 export function SidebarViewToggle({
   mode,
   onModeChange,
+  fileType,
 }: SidebarViewToggleProps) {
+  const hasThumbnails = fileType === "pptx";
+  const previewLabel = getPreviewLabel(fileType);
+
   return (
     <MenuTrigger>
       <Button
@@ -33,16 +50,18 @@ export function SidebarViewToggle({
           onAction={(key) => onModeChange(key as SidebarMode)}
           className="outline-none"
         >
-          <MenuItem
-            id="navigator"
-            className="flex items-center gap-2 px-3 py-1.5 text-sm cursor-pointer outline-none hover:bg-grey-3 dark:hover:bg-grey-15 text-grey-9 dark:text-grey-4"
-          >
-            <span className="w-4 text-center">
-              {mode === "navigator" ? "✓" : ""}
-            </span>
-            <LayoutIcon />
-            Navigator
-          </MenuItem>
+          {hasThumbnails && (
+            <MenuItem
+              id="navigator"
+              className="flex items-center gap-2 px-3 py-1.5 text-sm cursor-pointer outline-none hover:bg-grey-3 dark:hover:bg-grey-15 text-grey-9 dark:text-grey-4"
+            >
+              <span className="w-4 text-center">
+                {mode === "navigator" ? "✓" : ""}
+              </span>
+              <LayoutIcon />
+              Navigator
+            </MenuItem>
+          )}
           <MenuItem
             id="outline"
             className="flex items-center gap-2 px-3 py-1.5 text-sm cursor-pointer outline-none hover:bg-grey-3 dark:hover:bg-grey-15 text-grey-9 dark:text-grey-4"
@@ -52,6 +71,16 @@ export function SidebarViewToggle({
             </span>
             <NumberedListIcon />
             Outline
+          </MenuItem>
+          <MenuItem
+            id="preview"
+            className="flex items-center gap-2 px-3 py-1.5 text-sm cursor-pointer outline-none hover:bg-grey-3 dark:hover:bg-grey-15 text-grey-9 dark:text-grey-4"
+          >
+            <span className="w-4 text-center">
+              {mode === "preview" ? "✓" : ""}
+            </span>
+            <PreviewIcon />
+            {previewLabel}
           </MenuItem>
         </Menu>
       </Popover>

@@ -9,13 +9,16 @@ describe("<SidebarViewToggle />", () => {
   });
 
   it("renders the sidebar view button", () => {
-    // Arrange
     const onModeChange = vi.fn();
 
-    // Act
-    render(<SidebarViewToggle mode="navigator" onModeChange={onModeChange} />);
+    render(
+      <SidebarViewToggle
+        mode="outline"
+        onModeChange={onModeChange}
+        fileType="docx"
+      />,
+    );
 
-    // Assert
     expect(screen.getByRole("button", { name: "Sidebar view" })).toBeTruthy();
   });
 });

@@ -86,15 +86,9 @@
 .scroll-fade {
   --fade-size: 32px;
 
-  mask-image: linear-gradient(
-    to bottom,
-    transparent,
-    black var(--fade-size),
-    black calc(100% - var(--fade-size)),
-    transparent
-  );
   animation: scroll-fade linear both;
   animation-timeline: scroll(self);
+  animation-range: 0% 100%;
 }
 
 @keyframes scroll-fade {
@@ -134,6 +128,47 @@
   }
 }
 
+.left-sidebar {
+  width: 224px;
+  transition: width 200ms ease;
+  overflow: hidden;
+
+  @starting-style {
+    width: 224px;
+  }
+}
+
+.left-sidebar[data-collapsed] {
+  width: 44px;
+}
+
+.inspector-sidebar {
+  width: 240px;
+  transition: width 200ms ease;
+  overflow: hidden;
+
+  @starting-style {
+    width: 44px;
+  }
+}
+
+.inspector-sidebar[data-collapsed] {
+  width: 44px;
+}
+
+.inspector-spacer {
+  width: 240px;
+  transition: width 200ms ease;
+
+  @starting-style {
+    width: 44px;
+  }
+}
+
+.inspector-spacer[data-collapsed] {
+  width: 44px;
+}
+
 html,
 body {
   @apply bg-grey-1 dark:bg-ui-app-background;
@@ -155,6 +190,7 @@ body {
   );
 }
 
+/* biome-ignore lint/suspicious/noShorthandPropertyOverrides: @supports condition is a feature test, not an applied style */
 @supports (background: paint(id)) {
   .ai-highlight {
     background-image: paint(header-highlight);

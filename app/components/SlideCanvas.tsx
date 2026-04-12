@@ -2,9 +2,6 @@ import Placeholder from "@tiptap/extension-placeholder";
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { SlashCommand } from "../extensions/slash-command";
-import { createSlashCommandSuggestion } from "../extensions/slash-command-renderer";
-import { startDictation } from "../lib/speech-recognition";
 import {
   Button,
   Menu,
@@ -12,6 +9,8 @@ import {
   MenuTrigger,
   Popover,
 } from "react-aria-components";
+import { SlashCommand } from "../extensions/slash-command";
+import { createSlashCommandSuggestion } from "../extensions/slash-command-renderer";
 import type { Segment } from "../hooks/useTranslation";
 import { cn } from "../lib/cn";
 import type {
@@ -19,6 +18,7 @@ import type {
   SlideLayout,
   VisualShape,
 } from "../lib/parser-client";
+import { startDictation } from "../lib/speech-recognition";
 
 interface SlideCanvasProps {
   layout: SlideLayout;
@@ -91,6 +91,8 @@ function SlideBackgroundRenderer({
   return null;
 }
 
+const DEBUG_SHAPES = false;
+
 function ShapeRenderer({
   shape,
   scale,
@@ -100,6 +102,7 @@ function ShapeRenderer({
   scale: number;
   imageUrls?: Map<string, string>;
 }) {
+  const isLayout = shape.source === "layout";
   const style: React.CSSProperties = {
     position: "absolute",
     left: `${shape.x * scale}px`,
@@ -110,10 +113,41 @@ function ShapeRenderer({
     pointerEvents: "none",
   };
 
+  const debugLabel = DEBUG_SHAPES ? (
+    <span
+      style={{
+        position: "absolute",
+        top: 0,
+        left: 0,
+        fontSize: "9px",
+        padding: "1px 3px",
+        background: isLayout ? "rgba(255,0,255,0.8)" : "rgba(0,255,0,0.8)",
+        color: "#000",
+        zIndex: 99999,
+        pointerEvents: "none",
+        whiteSpace: "nowrap",
+      }}
+    >
+      {isLayout ? "L" : "S"} z:{shape.zIndex}{" "}
+      {shape.image ? `img:${shape.image.mediaPath.split("/").pop()}` : ""}
+      {shape.fill ? `fill:${shape.fill.color}` : ""}
+      {` ${Math.round(shape.width)}x${Math.round(shape.height)}`}
+    </span>
+  ) : null;
+
   if (shape.image) {
     const url = imageUrls?.get(shape.image.mediaPath);
     if (url) {
-      return <img src={url} alt="" style={{ ...style, objectFit: "cover" }} />;
+      return (
+        <div style={style}>
+          <img
+            src={url}
+            alt=""
+            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+          />
+          {debugLabel}
+        </div>
+      );
     }
   }
 
@@ -123,9 +157,30 @@ function ShapeRenderer({
         style={{
           ...style,
           backgroundColor: shape.fill.color,
-          ...(shape.fill.opacity != null && { opacity: shape.fill.opacity }),
+          ...(shape.fill.opacity != null
+            ? { opacity: shape.fill.opacity }
+            : {}),
+          ...(DEBUG_SHAPES
+            ? { outline: `2px solid ${isLayout ? "magenta" : "lime"}` }
+            : {}),
         }}
-      />
+      >
+        {debugLabel}
+      </div>
+    );
+  }
+
+  if (DEBUG_SHAPES) {
+    // Show shapes that have no fill and no image (e.g. connectors rendered as lines)
+    return (
+      <div
+        style={{
+          ...style,
+          outline: `1px dashed ${isLayout ? "magenta" : "lime"}`,
+        }}
+      >
+        {debugLabel}
+      </div>
     );
   }
 
@@ -156,14 +211,26 @@ function TextBoxEditor({
 }: TextBoxEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
   const editorInstanceRef = useRef<ReturnType<typeof useEditor>>(null);
-  const callbacksRef = useRef({ onContentChange, onTranslateSegment, source: segment.source, canTranslate });
-  callbacksRef.current = { onContentChange, onTranslateSegment, source: segment.source, canTranslate };
+  const callbacksRef = useRef({
+    onContentChange,
+    onTranslateSegment,
+    source: segment.source,
+    canTranslate,
+  });
+  callbacksRef.current = {
+    onContentChange,
+    onTranslateSegment,
+    source: segment.source,
+    canTranslate,
+  };
 
   const slashCommandSuggestion = useMemo(
     () =>
       createSlashCommandSuggestion({
         onInsertSource: () => {
-          editorInstanceRef.current?.commands.setContent(callbacksRef.current.source);
+          editorInstanceRef.current?.commands.setContent(
+            callbacksRef.current.source,
+          );
           callbacksRef.current.onContentChange(callbacksRef.current.source);
         },
         onTranslateSegment: () => {
@@ -423,7 +490,7 @@ export function SlideCanvas({
                   fontSizePoints={region.fontStyle?.sizePoints}
                   bold={region.fontStyle?.bold}
                   italic={region.fontStyle?.italic}
-                  fontColor={region.fontStyle?.color}
+                  fontColor={region.fontStyle?.color ?? layout.defaultTextColor}
                   textAlign={region.fontStyle?.align}
                   lineHeight={region.fontStyle?.lineHeight}
                   lineSpacingPoints={region.fontStyle?.lineSpacingPoints}

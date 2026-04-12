@@ -37,6 +37,7 @@ export interface VisualShape {
   fill?: ShapeFill;
   image?: ImageReference;
   zIndex: number;
+  source?: "slide" | "layout";
 }
 
 export interface SlideBackground {
@@ -71,6 +72,7 @@ export interface SlideLayout {
   regions: TextRegion[];
   shapes: VisualShape[];
   background?: SlideBackground;
+  defaultTextColor?: string;
 }
 
 export interface SlideImageData {
@@ -96,6 +98,15 @@ const EMU_PER_PX = 9525;
 
 function emuToPx(emu: number): number {
   return Math.round(emu / EMU_PER_PX);
+}
+
+function isColorDark(hex: string): boolean {
+  const c = hex.replace("#", "");
+  const r = Number.parseInt(c.slice(0, 2), 16);
+  const g = Number.parseInt(c.slice(2, 4), 16);
+  const b = Number.parseInt(c.slice(4, 6), 16);
+  // Relative luminance threshold
+  return (r * 299 + g * 587 + b * 114) / 1000 < 128;
 }
 
 // biome-ignore lint/suspicious/noExplicitAny: fast-xml-parser preserveOrder returns untyped nodes
@@ -346,7 +357,9 @@ export function parseMasterTextStyles(masterXml: string): MasterTextStyles {
   const parsed = parser.parse(masterXml);
   const styles: MasterTextStyles = {};
 
-  function extractStyleEntry(styleNodes: XmlNode[]): MasterTextStyleEntry | undefined {
+  function extractStyleEntry(
+    styleNodes: XmlNode[],
+  ): MasterTextStyleEntry | undefined {
     for (const node of styleNodes) {
       if ("a:lvl1pPr" in node) {
         const entry: MasterTextStyleEntry = {};
@@ -373,7 +386,13 @@ export function parseMasterTextStyles(masterXml: string): MasterTextStyles {
             }
           }
         }
-        if (entry.size != null || entry.align != null || entry.lineHeight != null || entry.lineSpacingPoints != null) return entry;
+        if (
+          entry.size != null ||
+          entry.align != null ||
+          entry.lineHeight != null ||
+          entry.lineSpacingPoints != null
+        )
+          return entry;
       }
     }
     return undefined;
@@ -461,7 +480,11 @@ export function extractSolidFill(
             const color = fillChild[":@"]?.["@_val"];
             if (color) {
               const alpha = extractAlpha(fillChild["a:srgbClr"]);
-              return { type: "solid", color: `#${color}`, ...(alpha != null && { opacity: alpha }) };
+              return {
+                type: "solid",
+                color: `#${color}`,
+                ...(alpha != null && { opacity: alpha }),
+              };
             }
           }
           if ("a:schemeClr" in fillChild && themeColors) {
@@ -470,7 +493,11 @@ export function extractSolidFill(
               const color = themeColors.get(schemeName);
               if (color) {
                 const alpha = extractAlpha(fillChild["a:schemeClr"]);
-                return { type: "solid", color, ...(alpha != null && { opacity: alpha }) };
+                return {
+                  type: "solid",
+                  color,
+                  ...(alpha != null && { opacity: alpha }),
+                };
               }
             }
           }
@@ -501,10 +528,12 @@ export function extractImageRef(
             if (embedId) {
               const mediaPath = relationships.get(embedId);
               if (mediaPath) {
-                const extension = mediaPath.split(".").pop()?.toLowerCase() ?? "";
+                const extension =
+                  mediaPath.split(".").pop()?.toLowerCase() ?? "";
                 return {
                   mediaPath,
-                  contentType: CONTENT_TYPES[extension] ?? "application/octet-stream",
+                  contentType:
+                    CONTENT_TYPES[extension] ?? "application/octet-stream",
                 };
               }
             }
@@ -643,10 +672,22 @@ export function extractFontStyle(
   // No a:r found - return paragraph-level properties (align, defRPr size) if any
   const style: FontStyle = {};
   let hasProperty = false;
-  if (align) { style.align = align; hasProperty = true; }
-  if (lineHeight != null) { style.lineHeight = lineHeight; hasProperty = true; }
-  if (lineSpacingPoints != null) { style.lineSpacingPoints = lineSpacingPoints; hasProperty = true; }
-  if (defRPrSize != null) { style.sizePoints = defRPrSize; hasProperty = true; }
+  if (align) {
+    style.align = align;
+    hasProperty = true;
+  }
+  if (lineHeight != null) {
+    style.lineHeight = lineHeight;
+    hasProperty = true;
+  }
+  if (lineSpacingPoints != null) {
+    style.lineSpacingPoints = lineSpacingPoints;
+    hasProperty = true;
+  }
+  if (defRPrSize != null) {
+    style.sizePoints = defRPrSize;
+    hasProperty = true;
+  }
   return hasProperty ? style : undefined;
 }
 
@@ -694,7 +735,11 @@ export function extractSlideBackground(
         key === "p:sldLayout" ||
         key === "p:sldMaster"
       ) {
-        const result = extractSlideBackground(node[key], relationships, themeColors);
+        const result = extractSlideBackground(
+          node[key],
+          relationships,
+          themeColors,
+        );
         if (result) return result;
       }
     }
@@ -846,7 +891,10 @@ export function extractLayoutPlaceholderPositions(
         if (key === "p:spPr") {
           for (const prop of node[key]) {
             if ("a:xfrm" in prop) {
-              let x = 0, y = 0, width = 0, height = 0;
+              let x = 0,
+                y = 0,
+                width = 0,
+                height = 0;
               let found = false;
               for (const child of prop["a:xfrm"]) {
                 const attrs = child[":@"];
@@ -884,7 +932,10 @@ export function extractLayoutPlaceholderPositions(
     }
 
     // Store by type first, fall back to idx
-    const entry: PlaceholderPosition = { ...position, ...(fontStyle && { fontStyle }) };
+    const entry: PlaceholderPosition = {
+      ...position,
+      ...(fontStyle && { fontStyle }),
+    };
     if (phType) {
       positions.set(phType, entry);
     } else if (phIdx) {
@@ -903,7 +954,11 @@ export function extractSlideLayout(
   themeColors?: Map<string, string>,
   masterTextStyles?: MasterTextStyles,
   layoutPlaceholderPositions?: Map<string, PlaceholderPosition>,
-): { regions: TextRegion[]; shapes: VisualShape[]; background?: SlideBackground } {
+): {
+  regions: TextRegion[];
+  shapes: VisualShape[];
+  background?: SlideBackground;
+} {
   const parsed = parser.parse(xml);
   const regions: TextRegion[] = [];
   const shapes: VisualShape[] = [];
@@ -994,7 +1049,8 @@ export function extractSlideLayout(
       const lineFill = extractLineColor(shapeNodes, themeColors);
       if (fill || image || lineFill) {
         // Line shapes (prst="line") render as their outline, not their area fill
-        const renderFill = isLineShape && lineFill ? lineFill : (fill ?? lineFill);
+        const renderFill =
+          isLineShape && lineFill ? lineFill : (fill ?? lineFill);
         // Ensure 0-dimension shapes are at least 1px visible
         if (position.height === 0) position.height = 1;
         if (position.width === 0) position.width = 1;
@@ -1029,16 +1085,28 @@ export function extractSlideLayout(
       const layoutEntry = layoutPlaceholderPositions.get(phType);
       if (layoutEntry?.fontStyle) {
         if (!fontStyle?.sizePoints && layoutEntry.fontStyle.sizePoints) {
-          fontStyle = { ...fontStyle, sizePoints: layoutEntry.fontStyle.sizePoints };
+          fontStyle = {
+            ...fontStyle,
+            sizePoints: layoutEntry.fontStyle.sizePoints,
+          };
         }
         if (!fontStyle?.align && layoutEntry.fontStyle.align) {
           fontStyle = { ...fontStyle, align: layoutEntry.fontStyle.align };
         }
         if (!fontStyle?.lineHeight && layoutEntry.fontStyle.lineHeight) {
-          fontStyle = { ...fontStyle, lineHeight: layoutEntry.fontStyle.lineHeight };
+          fontStyle = {
+            ...fontStyle,
+            lineHeight: layoutEntry.fontStyle.lineHeight,
+          };
         }
-        if (!fontStyle?.lineSpacingPoints && layoutEntry.fontStyle.lineSpacingPoints) {
-          fontStyle = { ...fontStyle, lineSpacingPoints: layoutEntry.fontStyle.lineSpacingPoints };
+        if (
+          !fontStyle?.lineSpacingPoints &&
+          layoutEntry.fontStyle.lineSpacingPoints
+        ) {
+          fontStyle = {
+            ...fontStyle,
+            lineSpacingPoints: layoutEntry.fontStyle.lineSpacingPoints,
+          };
         }
       }
     }
@@ -1062,7 +1130,10 @@ export function extractSlideLayout(
         fontStyle = { ...fontStyle, lineHeight: masterEntry.lineHeight };
       }
       if (!fontStyle?.lineSpacingPoints && masterEntry.lineSpacingPoints) {
-        fontStyle = { ...fontStyle, lineSpacingPoints: masterEntry.lineSpacingPoints };
+        fontStyle = {
+          ...fontStyle,
+          lineSpacingPoints: masterEntry.lineSpacingPoints,
+        };
       }
     }
 
@@ -1265,38 +1336,50 @@ function resolveInheritedBackground(
     if (layoutContent) {
       const layoutXml = new TextDecoder().decode(layoutContent);
       const layoutParsed = parser.parse(layoutXml);
-      const layoutBg = extractSlideBackground(
-        layoutParsed,
-        new Map(),
-        themeColors,
-      );
-      if (layoutBg) return layoutBg;
 
-      // Check slide master from layout's relationships
+      // Parse layout relationships so image backgrounds can resolve rIds
       const layoutRelsPath = layoutPath.replace(
         /ppt\/slideLayouts\/(slideLayout\d+\.xml)/,
         "ppt/slideLayouts/_rels/$1.rels",
       );
       const layoutRelsContent = files[layoutRelsPath];
-      if (layoutRelsContent) {
-        const layoutRels = parseRelationships(
-          new TextDecoder().decode(layoutRelsContent),
-        );
-        for (const target of layoutRels.values()) {
-          if (target.match(/slideMasters\/slideMaster\d+\.xml$/)) {
-            const masterContent = files[target];
-            if (masterContent) {
-              const masterXml = new TextDecoder().decode(masterContent);
-              const masterParsed = parser.parse(masterXml);
-              const masterBg = extractSlideBackground(
-                masterParsed,
-                new Map(),
-                themeColors,
-              );
-              if (masterBg) return masterBg;
-            }
-            break;
+      const layoutRels = layoutRelsContent
+        ? parseRelationships(new TextDecoder().decode(layoutRelsContent))
+        : new Map<string, string>();
+
+      const layoutBg = extractSlideBackground(
+        layoutParsed,
+        layoutRels,
+        themeColors,
+      );
+      if (layoutBg) return layoutBg;
+
+      // Check slide master from layout's relationships
+      for (const target of layoutRels.values()) {
+        if (target.match(/slideMasters\/slideMaster\d+\.xml$/)) {
+          const masterContent = files[target];
+          if (masterContent) {
+            const masterXml = new TextDecoder().decode(masterContent);
+            const masterParsed = parser.parse(masterXml);
+
+            // Parse master relationships for image backgrounds
+            const masterRelsPath = target.replace(
+              /ppt\/slideMasters\/(slideMaster\d+\.xml)/,
+              "ppt/slideMasters/_rels/$1.rels",
+            );
+            const masterRelsContent = files[masterRelsPath];
+            const masterRels = masterRelsContent
+              ? parseRelationships(new TextDecoder().decode(masterRelsContent))
+              : new Map<string, string>();
+
+            const masterBg = extractSlideBackground(
+              masterParsed,
+              masterRels,
+              themeColors,
+            );
+            if (masterBg) return masterBg;
           }
+          break;
         }
       }
     }
@@ -1357,15 +1440,41 @@ export function extractPptxLayout(data: Uint8Array): {
       ? parseRelationships(new TextDecoder().decode(relsContent))
       : new Map<string, string>();
 
-    // Parse slide layout placeholder positions for fallback positioning
-    let layoutPlaceholderPositions: Map<string, PlaceholderPosition> | undefined;
+    // Parse slide layout for placeholder positions and inherited shapes
+    let layoutPlaceholderPositions:
+      | Map<string, PlaceholderPosition>
+      | undefined;
+    let layoutShapes: VisualShape[] = [];
     for (const target of relationships.values()) {
       if (target.match(/slideLayouts\/slideLayout\d+\.xml$/)) {
         const layoutContent = files[target];
         if (layoutContent) {
-          layoutPlaceholderPositions = extractLayoutPlaceholderPositions(
-            new TextDecoder().decode(layoutContent),
+          const layoutXmlStr = new TextDecoder().decode(layoutContent);
+          layoutPlaceholderPositions =
+            extractLayoutPlaceholderPositions(layoutXmlStr);
+
+          // Extract visual shapes from the layout (background images, decorative elements)
+          const layoutRelsPath = target.replace(
+            /ppt\/slideLayouts\/(slideLayout\d+\.xml)/,
+            "ppt/slideLayouts/_rels/$1.rels",
           );
+          const layoutRelsContent = files[layoutRelsPath];
+          const layoutRels = layoutRelsContent
+            ? parseRelationships(new TextDecoder().decode(layoutRelsContent))
+            : new Map<string, string>();
+
+          const layoutResult = extractSlideLayout(
+            layoutXmlStr,
+            slideIndex,
+            layoutRels,
+            themeColors,
+          );
+          // Only inherit image shapes from the layout (background images).
+          // Non-image shapes (connectors, fills, placeholders) either can't be
+          // rendered with full fidelity (shadows/glows) or are content templates.
+          layoutShapes = layoutResult.shapes
+            .filter((s) => s.image)
+            .map((s) => ({ ...s, source: "layout" as const }));
         }
         break;
       }
@@ -1390,10 +1499,29 @@ export function extractPptxLayout(data: Uint8Array): {
       );
     }
 
-    // TODO: properly separate layout/master background shapes during extraction
-    // instead of filtering by size heuristic after the fact
+    // Merge layout shapes (behind) with slide shapes and regions (in front)
+    // Offset slide z-indices above layout shapes so slide content renders on top
+    const layoutMaxZ =
+      layoutShapes.length > 0
+        ? Math.max(...layoutShapes.map((s) => s.zIndex))
+        : 0;
+    const offsetShapes =
+      layoutMaxZ > 0
+        ? shapes.map((s) => ({
+            ...s,
+            zIndex: s.zIndex + layoutMaxZ,
+            source: "slide" as const,
+          }))
+        : shapes.map((s) => ({ ...s, source: "slide" as const }));
+    const offsetRegions =
+      layoutMaxZ > 0
+        ? regions.map((r) => ({ ...r, zIndex: r.zIndex + layoutMaxZ }))
+        : regions;
+    const allShapes = [...layoutShapes, ...offsetShapes];
+
     // Filter out full-slide solid fill shapes (layout/master background rectangles)
-    const filteredShapes = shapes.filter((shape) => {
+    // but keep images since they are intentional background visuals
+    const filteredShapes = allShapes.filter((shape) => {
       if (shape.image) return true;
       const coversSlide =
         shape.width >= slideWidth * 0.9 && shape.height >= slideHeight * 0.9;
@@ -1404,15 +1532,24 @@ export function extractPptxLayout(data: Uint8Array): {
     for (const shape of filteredShapes) {
       if (shape.image) mediaPathSet.add(shape.image.mediaPath);
     }
-    if (resolvedBackground?.image) mediaPathSet.add(resolvedBackground.image.mediaPath);
+    if (resolvedBackground?.image)
+      mediaPathSet.add(resolvedBackground.image.mediaPath);
+
+    // Default text color: when background is dark, use lt1 (light); otherwise dk1 (dark)
+    const bgColor = resolvedBackground?.fill?.color ?? "#FFFFFF";
+    const bgIsDark = isColorDark(bgColor);
+    const defaultTextColor = bgIsDark
+      ? (themeColors.get("lt1") ?? "#FFFFFF")
+      : (themeColors.get("dk1") ?? "#000000");
 
     layouts.push({
       slideIndex,
       width: slideWidth,
       height: slideHeight,
-      regions,
+      regions: offsetRegions,
       shapes: filteredShapes,
       background: resolvedBackground,
+      defaultTextColor,
     });
   }
 

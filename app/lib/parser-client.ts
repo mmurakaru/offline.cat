@@ -1,14 +1,15 @@
 // Thin async wrapper around parser.worker.ts.
 // Keeps the main thread free during file parsing and reconstruction.
 
+import type { ParserRequest } from "../workers/parser.worker";
+import type { DocxDocumentLayout } from "./parsers/docx";
 import type {
   FontStyle,
-  ShapeFill,
   ImageReference,
+  ShapeFill,
   SlideBackground,
   VisualShape,
 } from "./parsers/pptx";
-import type { ParserRequest } from "../workers/parser.worker";
 
 let worker: Worker | null = null;
 
@@ -68,7 +69,41 @@ export interface SlideLayout {
   background?: SlideBackground;
 }
 
-export type { FontStyle, ShapeFill, ImageReference, SlideBackground, VisualShape };
+export type {
+  DocxDocumentLayout,
+  FontStyle,
+  ImageReference,
+  ShapeFill,
+  SlideBackground,
+  VisualShape,
+};
+
+export interface DocxLayoutResult {
+  layout: DocxDocumentLayout | null;
+  imageUrls: Map<string, string>;
+}
+
+export async function extractDocxLayoutFromWorker(
+  data: Uint8Array,
+): Promise<DocxLayoutResult> {
+  const response = await postMessage<{
+    action: "extractDocxLayout";
+    layout: DocxDocumentLayout | null;
+    images: { mediaPath: string; bytes: Uint8Array; contentType: string }[];
+  }>({ action: "extractDocxLayout", data, ext: "docx" });
+
+  const imageUrls = new Map<string, string>();
+  for (const image of response.images ?? []) {
+    const bytes =
+      image.bytes instanceof ArrayBuffer
+        ? new Uint8Array(image.bytes)
+        : image.bytes;
+    const blob = new Blob([bytes], { type: image.contentType });
+    imageUrls.set(image.mediaPath, URL.createObjectURL(blob));
+  }
+
+  return { layout: response.layout ?? null, imageUrls };
+}
 
 export async function extractLayout(
   data: Uint8Array,

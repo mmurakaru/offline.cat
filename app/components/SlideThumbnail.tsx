@@ -34,7 +34,7 @@ export const SlideThumbnail = memo(function SlideThumbnail({
       {/* Background image */}
       {layout.background?.image &&
         (() => {
-          const url = imageUrls?.get(layout.background!.image!.mediaPath);
+          const url = imageUrls?.get(layout.background?.image?.mediaPath);
           return url ? (
             <img
               src={url}
@@ -124,7 +124,7 @@ export const SlideThumbnail = memo(function SlideThumbnail({
                 : `${fontStyle?.lineHeight ?? 1.3}`,
               fontWeight: fontStyle?.bold ? "bold" : undefined,
               fontStyle: fontStyle?.italic ? "italic" : undefined,
-              color: fontStyle?.color ?? "#000000",
+              color: fontStyle?.color ?? layout.defaultTextColor ?? "#000000",
               textAlign: fontStyle?.align ?? undefined,
             }}
           >

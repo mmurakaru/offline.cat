@@ -21,16 +21,15 @@ describe("<InspectorPanel />", () => {
     expect(screen.getByText("Select a segment")).toBeTruthy();
   });
 
-  it("shows glossary placeholder when segment has no TM or origin", () => {
+  it("renders inspector for a segment with no TM or origin", () => {
     // Arrange
     const segment: Segment = { id: "1", source: "Hello" };
 
     // Act
     render(<InspectorPanel segment={segment} onConfirm={onConfirm} />);
 
-    // Assert
-    expect(screen.getByText("Glossary")).toBeTruthy();
-    expect(screen.getByText("No glossary entries")).toBeTruthy();
+    // Assert - should render without crashing, no glossary section
+    expect(screen.queryByText("Glossary")).toBeNull();
   });
 
   it("shows TM suggestion with score and Apply button for fuzzy matches", () => {

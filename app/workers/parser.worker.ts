@@ -1,18 +1,20 @@
 // Offloads file parsing and reconstruction to a worker thread
 // so unzipping, XML parsing, and rezipping don't block the UI.
 
+import { unzipSync } from "fflate";
 import {
   extractSegments as extractDocx,
+  extractDocxImages,
+  extractDocxLayout,
   reconstructDocx,
 } from "../lib/parsers/docx";
 import {
   extractSegments as extractHtml,
   reconstructHtml,
 } from "../lib/parsers/html";
-import { unzipSync } from "fflate";
 import {
-  extractPptxLayout,
   extractSegments as extractPptx,
+  extractPptxLayout,
   extractSlideImages,
   reconstructPptx,
 } from "../lib/parsers/pptx";
@@ -25,6 +27,7 @@ export type ParserRequest =
   | { action: "extract"; data: Uint8Array; ext: string }
   | { action: "extractLayout"; data: Uint8Array; ext: string }
   | { action: "extractVisualLayout"; data: Uint8Array; ext: string }
+  | { action: "extractDocxLayout"; data: Uint8Array; ext: string }
   | {
       action: "reconstruct";
       data: Uint8Array;
@@ -52,7 +55,9 @@ self.addEventListener("message", (event: MessageEvent<ParserRequest>) => {
           ? request.data
           : new Uint8Array(request.data as ArrayBuffer);
       const result =
-        request.ext === "pptx" ? extractPptxLayout(data) : { layouts: [], mediaPaths: [] };
+        request.ext === "pptx"
+          ? extractPptxLayout(data)
+          : { layouts: [], mediaPaths: [] };
       self.postMessage({ action: "extractLayout", layouts: result.layouts });
     } catch (error) {
       console.error("extractLayout error:", error);
@@ -102,6 +107,44 @@ self.addEventListener("message", (event: MessageEvent<ParserRequest>) => {
       self.postMessage({
         action: "extractVisualLayout",
         layouts: [],
+        images: [],
+      });
+    }
+    return;
+  }
+
+  if (request.action === "extractDocxLayout") {
+    try {
+      const data =
+        request.data instanceof Uint8Array
+          ? request.data
+          : new Uint8Array(request.data as ArrayBuffer);
+      const { layout, mediaPaths } = extractDocxLayout(data);
+
+      // Extract images and transfer buffers
+      const files = unzipSync(data);
+      const images = extractDocxImages(files, mediaPaths);
+      const transferBuffers: ArrayBuffer[] = images.map(
+        (img) => img.bytes.buffer as ArrayBuffer,
+      );
+
+      self.postMessage(
+        {
+          action: "extractDocxLayout",
+          layout,
+          images: images.map((img) => ({
+            mediaPath: img.mediaPath,
+            bytes: img.bytes,
+            contentType: img.contentType,
+          })),
+        },
+        { transfer: transferBuffers },
+      );
+    } catch (error) {
+      console.error("extractDocxLayout error:", error);
+      self.postMessage({
+        action: "extractDocxLayout",
+        layout: null,
         images: [],
       });
     }
