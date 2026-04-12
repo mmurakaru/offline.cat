@@ -1,5 +1,6 @@
 import {
   isRouteErrorResponse,
+  Link,
   Links,
   Meta,
   Outlet,
@@ -9,6 +10,8 @@ import {
 
 import type { Route } from "./+types/root";
 import "./app.css";
+import "./lib/register-paint-worklets";
+import { ErrorIcon } from "./components/error-icon";
 
 export const links: Route.LinksFunction = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -46,30 +49,43 @@ export default function App() {
 }
 
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
-  let message = "Oops!";
-  let details = "An unexpected error occurred.";
+  let code = "Error";
+  let message = "An unexpected error occurred.";
   let stack: string | undefined;
 
   if (isRouteErrorResponse(error)) {
-    message = error.status === 404 ? "404" : "Error";
-    details =
+    code = String(error.status);
+    message =
       error.status === 404
         ? "The requested page could not be found."
-        : error.statusText || details;
-  } else if (import.meta.env.DEV && error && error instanceof Error) {
-    details = error.message;
-    stack = error.stack;
+        : error.statusText || message;
+  } else if (error instanceof Error) {
+    message = error.message;
+    if (import.meta.env.DEV) {
+      stack = error.stack;
+    }
   }
 
   return (
-    <main className="pt-16 p-4 container mx-auto">
-      <h1>{message}</h1>
-      <p>{details}</p>
-      {stack && (
-        <pre className="w-full p-4 overflow-x-auto">
-          <code>{stack}</code>
-        </pre>
-      )}
+    <main className="h-screen flex flex-col items-center justify-center bg-grey-1 dark:bg-ui-app-background">
+      <div className="flex flex-col items-center gap-4 max-w-md text-center">
+        <ErrorIcon className="w-8 h-8 text-grey-6" />
+        <h1 className="text-2xl font-semibold text-grey-9 dark:text-grey-4">
+          {code}
+        </h1>
+        <p className="text-sm text-grey-7 dark:text-grey-6">{message}</p>
+        {stack && (
+          <pre className="w-full mt-4 p-3 rounded-lg bg-grey-2 dark:bg-grey-15 text-xs text-grey-8 dark:text-grey-6 overflow-x-auto text-left">
+            <code>{stack}</code>
+          </pre>
+        )}
+        <Link
+          to="/"
+          className="mt-4 px-4 py-2 text-sm font-medium rounded-lg bg-primary-5 text-white hover:bg-primary-6 transition-colors"
+        >
+          Back to home
+        </Link>
+      </div>
     </main>
   );
 }

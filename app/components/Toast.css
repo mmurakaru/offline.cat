@@ -1,0 +1,24 @@
+.react-aria-Toast {
+  view-transition-class: toast;
+  animation: slide-in 400ms ease-out;
+}
+
+@keyframes slide-in {
+  from {
+    translate: 100% 0;
+    opacity: 0;
+  }
+}
+
+::view-transition-old(.toast):only-child {
+  animation: slide-out 400ms;
+  animation-fill-mode: forwards;
+}
+
+@keyframes slide-out {
+  to {
+    translate: 100% 0;
+    opacity: 0;
+    visibility: hidden;
+  }
+}

@@ -5,7 +5,7 @@ export interface Segment {
   id: string;
   source: string;
   target?: string;
-  origin?: "translationMemory" | "mt" | "user";
+  origin?: "translationMemory" | "ai" | "user";
   translationMemorySuggestion?: string;
   translationMemoryScore?: number;
   needsTranslation?: boolean;
@@ -59,7 +59,7 @@ export function useTranslation() {
                   ? {
                       ...segment,
                       target: result.translation,
-                      origin: "mt" as const,
+                      origin: "ai" as const,
                     }
                   : segment,
               ),

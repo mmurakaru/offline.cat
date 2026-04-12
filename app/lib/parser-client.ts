@@ -2,6 +2,14 @@
 // Keeps the main thread free during file parsing and reconstruction.
 
 import type { ParserRequest } from "../workers/parser.worker";
+import type { DocxDocumentLayout } from "./parsers/docx";
+import type {
+  FontStyle,
+  ImageReference,
+  ShapeFill,
+  SlideBackground,
+  VisualShape,
+} from "./parsers/pptx";
 
 let worker: Worker | null = null;
 
@@ -16,11 +24,14 @@ function getWorker(): Worker {
   return worker;
 }
 
-// Sends a request to the worker and resolves with the response.
-function postMessage<T>(request: ParserRequest): Promise<T> {
+// Sends a request to the worker and resolves with the matching response.
+function postMessage<T extends { action: string }>(
+  request: ParserRequest,
+): Promise<T> {
   return new Promise((resolve) => {
     const parserWorker = getWorker();
     const handler = (event: MessageEvent) => {
+      if (event.data?.action !== request.action) return;
       parserWorker.removeEventListener("message", handler);
       resolve(event.data);
     };
@@ -39,6 +50,104 @@ export async function extractSegments(
     segments: { id: string; source: string }[];
   }>({ action: "extract", data, ext });
   return response.segments;
+}
+
+export interface SlideLayout {
+  slideIndex: number;
+  width: number;
+  height: number;
+  regions: {
+    segmentId: string;
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    fontStyle?: FontStyle;
+    zIndex: number;
+  }[];
+  shapes: VisualShape[];
+  background?: SlideBackground;
+}
+
+export type {
+  DocxDocumentLayout,
+  FontStyle,
+  ImageReference,
+  ShapeFill,
+  SlideBackground,
+  VisualShape,
+};
+
+export interface DocxLayoutResult {
+  layout: DocxDocumentLayout | null;
+  imageUrls: Map<string, string>;
+}
+
+export async function extractDocxLayoutFromWorker(
+  data: Uint8Array,
+): Promise<DocxLayoutResult> {
+  const response = await postMessage<{
+    action: "extractDocxLayout";
+    layout: DocxDocumentLayout | null;
+    images: { mediaPath: string; bytes: Uint8Array; contentType: string }[];
+  }>({ action: "extractDocxLayout", data, ext: "docx" });
+
+  const imageUrls = new Map<string, string>();
+  for (const image of response.images ?? []) {
+    const bytes =
+      image.bytes instanceof ArrayBuffer
+        ? new Uint8Array(image.bytes)
+        : image.bytes;
+    const blob = new Blob([bytes], { type: image.contentType });
+    imageUrls.set(image.mediaPath, URL.createObjectURL(blob));
+  }
+
+  return { layout: response.layout ?? null, imageUrls };
+}
+
+export async function extractLayout(
+  data: Uint8Array,
+  ext: string,
+): Promise<SlideLayout[]> {
+  const response = await postMessage<{
+    action: "extractLayout";
+    layouts: SlideLayout[];
+  }>({ action: "extractLayout", data, ext });
+  return response.layouts ?? [];
+}
+
+export interface VisualLayoutResult {
+  layouts: SlideLayout[];
+  imageUrls: Map<string, string>;
+}
+
+export async function extractVisualLayout(
+  data: Uint8Array,
+  ext: string,
+): Promise<VisualLayoutResult> {
+  const response = await postMessage<{
+    action: "extractVisualLayout";
+    layouts: SlideLayout[];
+    images: { mediaPath: string; bytes: Uint8Array; contentType: string }[];
+  }>({ action: "extractVisualLayout", data, ext });
+
+  const imageUrls = new Map<string, string>();
+  for (const image of response.images ?? []) {
+    const bytes =
+      image.bytes instanceof ArrayBuffer
+        ? new Uint8Array(image.bytes)
+        : image.bytes;
+    const blob = new Blob([bytes], { type: image.contentType });
+    imageUrls.set(image.mediaPath, URL.createObjectURL(blob));
+  }
+
+  return { layouts: response.layouts ?? [], imageUrls };
+}
+
+export function revokeImageUrls(imageUrls: Map<string, string>): void {
+  for (const url of imageUrls.values()) {
+    URL.revokeObjectURL(url);
+  }
 }
 
 // Reconstructs a translated file off the main thread.
