@@ -1,9 +1,12 @@
 import Placeholder from "@tiptap/extension-placeholder";
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
-import { useEffect } from "react";
+import { useEffect, useMemo, useRef } from "react";
+import { SlashCommand } from "../extensions/slash-command";
+import { createSlashCommandSuggestion } from "../extensions/slash-command-renderer";
 import type { Segment } from "../hooks/useTranslation";
 import { cn } from "../lib/cn";
+import { startDictation } from "../lib/speech-recognition";
 
 interface SegmentEditorRowProps {
   segment: Segment;
@@ -11,6 +14,8 @@ interface SegmentEditorRowProps {
   onFocus: () => void;
   onContentChange: (value: string) => void;
   onConfirm: (value: string) => void;
+  onTranslateSegment: () => void;
+  canTranslate: boolean;
 }
 
 function SegmentEditorRow({
@@ -19,7 +24,38 @@ function SegmentEditorRow({
   onFocus,
   onContentChange,
   onConfirm,
+  onTranslateSegment,
+  canTranslate,
 }: SegmentEditorRowProps) {
+  const editorInstanceRef = useRef<ReturnType<typeof useEditor>>(null);
+
+  const callbacksRef = useRef({ onContentChange, onTranslateSegment, source: segment.source, canTranslate });
+  callbacksRef.current = { onContentChange, onTranslateSegment, source: segment.source, canTranslate };
+
+  const slashCommandSuggestion = useMemo(
+    () =>
+      createSlashCommandSuggestion({
+        onInsertSource: () => {
+          editorInstanceRef.current?.commands.setContent(callbacksRef.current.source);
+          callbacksRef.current.onContentChange(callbacksRef.current.source);
+        },
+        onTranslateSegment: () => {
+          callbacksRef.current.onTranslateSegment();
+        },
+        canTranslate: () => callbacksRef.current.canTranslate,
+        onStartDictation: () => {
+          startDictation(
+            (text) => {
+              editorInstanceRef.current?.commands.setContent(text);
+              callbacksRef.current.onContentChange(text);
+            },
+            () => {},
+          );
+        },
+      }),
+    [],
+  );
+
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -32,6 +68,9 @@ function SegmentEditorRow({
       }),
       Placeholder.configure({
         placeholder: "Click to translate...",
+      }),
+      SlashCommand.configure({
+        suggestion: slashCommandSuggestion,
       }),
     ],
     content: segment.target ?? "",
@@ -56,11 +95,13 @@ function SegmentEditorRow({
     },
   });
 
+  editorInstanceRef.current = editor;
+
   useEffect(() => {
     if (!editor) return;
     const currentText = editor.getText();
     const newText = segment.target ?? "";
-    if (currentText !== newText && !editor.isFocused) {
+    if (currentText !== newText) {
       editor.commands.setContent(newText);
     }
   }, [editor, segment.target]);
@@ -95,6 +136,8 @@ interface SegmentListEditorProps {
   onSegmentFocus: (segmentId: string) => void;
   onTargetChange: (segmentId: string, value: string) => void;
   onConfirm: (segmentId: string, translation: string) => void;
+  onTranslateSegment: (segmentId: string) => void;
+  canTranslate: boolean;
 }
 
 export function SegmentListEditor({
@@ -103,6 +146,8 @@ export function SegmentListEditor({
   onSegmentFocus,
   onTargetChange,
   onConfirm,
+  onTranslateSegment,
+  canTranslate,
 }: SegmentListEditorProps) {
   return (
     <div className="max-w-4xl mx-auto py-4">
@@ -120,6 +165,8 @@ export function SegmentListEditor({
               onFocus={() => onSegmentFocus(segment.id)}
               onContentChange={(value) => onTargetChange(segment.id, value)}
               onConfirm={(value) => onConfirm(segment.id, value)}
+              onTranslateSegment={() => onTranslateSegment(segment.id)}
+              canTranslate={canTranslate}
             />
           ))}
         </div>

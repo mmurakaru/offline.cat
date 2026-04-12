@@ -25,7 +25,7 @@ const SUPPORTED_SOURCES = new Set([
 ]);
 
 export async function detectLanguage(text: string): Promise<string | null> {
-  if (!("LanguageDetector" in self)) return null;
+  if (!("LanguageDetector" in globalThis)) return null;
 
   try {
     const detector = await LanguageDetector.create();

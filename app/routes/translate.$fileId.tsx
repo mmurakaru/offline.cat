@@ -30,6 +30,7 @@ import { cn } from "../lib/cn";
 import type { FileRecord } from "../lib/db";
 import { getDB } from "../lib/db";
 import { detectLanguage } from "../lib/language-detector";
+import { translateSegments } from "../lib/translator";
 import {
   extractSegments,
   extractVisualLayout,
@@ -293,6 +294,31 @@ export default function Translate() {
     translate(segments, sourceLanguage, targetLanguage);
   }, [segments, sourceLanguage, targetLanguage, translate]);
 
+  const handleTranslateSegment = useCallback(
+    async (segmentId: string) => {
+      const segment = segments.find((s) => s.id === segmentId);
+      if (!segment || !sourceLanguage || !targetLanguage) return;
+
+      const controller = new AbortController();
+      await translateSegments(
+        [{ id: segment.id, source: segment.source }],
+        sourceLanguage,
+        targetLanguage,
+        controller.signal,
+        (result) => {
+          setSegments((prev) =>
+            prev.map((s) =>
+              s.id === result.id
+                ? { ...s, target: result.translation, origin: "ai" as const }
+                : s,
+            ),
+          );
+        },
+      );
+    },
+    [segments, sourceLanguage, targetLanguage, setSegments],
+  );
+
   const handleConfirm = useCallback(
     async (segmentId: string, translation: string) => {
       const segment = segments.find((s) => s.id === segmentId);
@@ -461,6 +487,8 @@ export default function Translate() {
               onSegmentFocus={handleSegmentClick}
               onTargetChange={handleTargetChange}
               onConfirm={handleConfirm}
+              onTranslateSegment={handleTranslateSegment}
+              canTranslate={!!sourceLanguage && !!targetLanguage}
             />
           )}
         </div>
@@ -613,6 +641,8 @@ export default function Translate() {
                 onSegmentFocus={setActiveSegmentId}
                 onTargetChange={handleTargetChange}
                 onConfirm={handleConfirm}
+                onTranslateSegment={handleTranslateSegment}
+                canTranslate={!!sourceLanguage && !!targetLanguage}
                 imageUrls={imageUrls}
                 zoomPercent={zoomPercent}
                 onZoomChange={setZoomPercent}
@@ -625,6 +655,8 @@ export default function Translate() {
                 onSegmentFocus={setActiveSegmentId}
                 onTargetChange={handleTargetChange}
                 onConfirm={handleConfirm}
+                onTranslateSegment={handleTranslateSegment}
+                canTranslate={!!sourceLanguage && !!targetLanguage}
               />
             )}
           </div>

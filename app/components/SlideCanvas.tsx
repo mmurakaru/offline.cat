@@ -1,7 +1,10 @@
 import Placeholder from "@tiptap/extension-placeholder";
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { SlashCommand } from "../extensions/slash-command";
+import { createSlashCommandSuggestion } from "../extensions/slash-command-renderer";
+import { startDictation } from "../lib/speech-recognition";
 import {
   Button,
   Menu,
@@ -22,6 +25,8 @@ interface SlideCanvasProps {
   segments: Segment[];
   activeSegmentId: string | null;
   onSegmentFocus: (segmentId: string) => void;
+  onTranslateSegment: (segmentId: string) => void;
+  canTranslate: boolean;
   onTargetChange: (segmentId: string, value: string) => void;
   onConfirm: (segmentId: string, translation: string) => void;
   imageUrls?: Map<string, string>;
@@ -49,6 +54,8 @@ interface TextBoxEditorProps {
   onFocus: () => void;
   onContentChange: (value: string) => void;
   onConfirm: (value: string) => void;
+  onTranslateSegment: () => void;
+  canTranslate: boolean;
 }
 
 function SlideBackgroundRenderer({
@@ -144,8 +151,37 @@ function TextBoxEditor({
   onFocus,
   onContentChange,
   onConfirm,
+  onTranslateSegment,
+  canTranslate,
 }: TextBoxEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
+  const editorInstanceRef = useRef<ReturnType<typeof useEditor>>(null);
+  const callbacksRef = useRef({ onContentChange, onTranslateSegment, source: segment.source, canTranslate });
+  callbacksRef.current = { onContentChange, onTranslateSegment, source: segment.source, canTranslate };
+
+  const slashCommandSuggestion = useMemo(
+    () =>
+      createSlashCommandSuggestion({
+        onInsertSource: () => {
+          editorInstanceRef.current?.commands.setContent(callbacksRef.current.source);
+          callbacksRef.current.onContentChange(callbacksRef.current.source);
+        },
+        onTranslateSegment: () => {
+          callbacksRef.current.onTranslateSegment();
+        },
+        canTranslate: () => callbacksRef.current.canTranslate,
+        onStartDictation: () => {
+          startDictation(
+            (text) => {
+              editorInstanceRef.current?.commands.setContent(text);
+              callbacksRef.current.onContentChange(text);
+            },
+            () => {},
+          );
+        },
+      }),
+    [],
+  );
 
   // 1pt = 4/3 px (96dpi), then scale to canvas size
   const PT_TO_PX = 4 / 3;
@@ -165,6 +201,9 @@ function TextBoxEditor({
       }),
       Placeholder.configure({
         placeholder: segment.source,
+      }),
+      SlashCommand.configure({
+        suggestion: slashCommandSuggestion,
       }),
     ],
     content: segment.target ?? "",
@@ -201,12 +240,14 @@ function TextBoxEditor({
     },
   });
 
-  // Sync external content changes (e.g. from MT)
+  editorInstanceRef.current = editor;
+
+  // Sync external content changes (e.g. from MT or /ai command)
   useEffect(() => {
     if (!editor) return;
     const currentText = editor.getText();
     const newText = segment.target ?? "";
-    if (currentText !== newText && !editor.isFocused) {
+    if (currentText !== newText) {
       editor.commands.setContent(newText);
     }
   }, [editor, segment.target]);
@@ -256,6 +297,8 @@ export function SlideCanvas({
   onSegmentFocus,
   onTargetChange,
   onConfirm,
+  onTranslateSegment,
+  canTranslate,
   imageUrls,
   zoomPercent,
   onZoomChange,
@@ -389,6 +432,10 @@ export function SlideCanvas({
                     onTargetChange(region.segmentId, value)
                   }
                   onConfirm={handleConfirm(region.segmentId)}
+                  onTranslateSegment={() =>
+                    onTranslateSegment(region.segmentId)
+                  }
+                  canTranslate={canTranslate}
                 />
               );
             })}

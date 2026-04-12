@@ -1,10 +1,13 @@
 import Placeholder from "@tiptap/extension-placeholder";
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
-import { useEffect } from "react";
+import { useEffect, useMemo, useRef } from "react";
+import { SlashCommand } from "../extensions/slash-command";
+import { createSlashCommandSuggestion } from "../extensions/slash-command-renderer";
 import type { Segment } from "../hooks/useTranslation";
 import { cn } from "../lib/cn";
 import type { SlideLayout } from "../lib/parser-client";
+import { startDictation } from "../lib/speech-recognition";
 
 interface OutlineSidebarProps {
   segments: Segment[];
@@ -14,6 +17,8 @@ interface OutlineSidebarProps {
   onSegmentFocus: (segmentId: string) => void;
   onTargetChange: (segmentId: string, value: string) => void;
   onConfirm: (segmentId: string, translation: string) => void;
+  onTranslateSegment: (segmentId: string) => void;
+  canTranslate: boolean;
 }
 
 function getStatusColor(segment: Segment): string {
@@ -29,13 +34,44 @@ function SegmentRow({
   onFocus,
   onContentChange,
   onConfirm,
+  onTranslateSegment,
 }: {
   segment: Segment;
   isActive: boolean;
   onFocus: () => void;
   onContentChange: (value: string) => void;
   onConfirm: (value: string) => void;
+  onTranslateSegment: () => void;
+  canTranslate: boolean;
 }) {
+  const editorInstanceRef = useRef<ReturnType<typeof useEditor>>(null);
+  const callbacksRef = useRef({ onContentChange, onTranslateSegment, source: segment.source, canTranslate });
+  callbacksRef.current = { onContentChange, onTranslateSegment, source: segment.source, canTranslate };
+
+  const slashCommandSuggestion = useMemo(
+    () =>
+      createSlashCommandSuggestion({
+        onInsertSource: () => {
+          editorInstanceRef.current?.commands.setContent(callbacksRef.current.source);
+          callbacksRef.current.onContentChange(callbacksRef.current.source);
+        },
+        onTranslateSegment: () => {
+          callbacksRef.current.onTranslateSegment();
+        },
+        canTranslate: () => callbacksRef.current.canTranslate,
+        onStartDictation: () => {
+          startDictation(
+            (text) => {
+              editorInstanceRef.current?.commands.setContent(text);
+              callbacksRef.current.onContentChange(text);
+            },
+            () => {},
+          );
+        },
+      }),
+    [],
+  );
+
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -48,6 +84,9 @@ function SegmentRow({
       }),
       Placeholder.configure({
         placeholder: "Click to translate...",
+      }),
+      SlashCommand.configure({
+        suggestion: slashCommandSuggestion,
       }),
     ],
     content: segment.target ?? "",
@@ -72,11 +111,13 @@ function SegmentRow({
     },
   });
 
+  editorInstanceRef.current = editor;
+
   useEffect(() => {
     if (!editor) return;
     const currentText = editor.getText();
     const newText = segment.target ?? "";
-    if (currentText !== newText && !editor.isFocused) {
+    if (currentText !== newText) {
       editor.commands.setContent(newText);
     }
   }, [editor, segment.target]);
@@ -127,6 +168,8 @@ export function OutlineSidebar({
   onSegmentFocus,
   onTargetChange,
   onConfirm,
+  onTranslateSegment,
+  canTranslate,
 }: OutlineSidebarProps) {
   const segmentMap = new Map(segments.map((segment) => [segment.id, segment]));
 
@@ -162,6 +205,8 @@ export function OutlineSidebar({
                 onFocus={() => onSegmentFocus(segment.id)}
                 onContentChange={(value) => onTargetChange(segment.id, value)}
                 onConfirm={(value) => onConfirm(segment.id, value)}
+                onTranslateSegment={() => onTranslateSegment(segment.id)}
+                canTranslate={canTranslate}
               />
             ))}
           </div>
