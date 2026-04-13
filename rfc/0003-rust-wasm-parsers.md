@@ -38,7 +38,7 @@ The PPTX parser has hundreds of lines like `node?.['a:rPr']?.[0]?.['a:solidFill'
 File reconstruction - modifying document XML and repacking the ZIP - is the riskiest operation in the app. A dropped attribute or misplaced namespace breaks the output file. Rust's type system and ownership model make it harder to accidentally discard structure during transformation.
 
 **4. The parsing layer is isolated.**
-The parsers are already behind a clean boundary: `parser-client.ts` sends bytes to a web worker, the worker calls format-specific functions, results come back as typed objects. Swapping the implementation inside the worker doesn't touch the rest of the app. This is a contained rewrite with a clear interface contract.
+The parsers sit behind the `FormatParser` interface (`app/lib/ice/parser-interface.ts`). Each format is an adapter registered in `app/lib/ice/adapters/registry.ts`. The worker calls `getParser(ext).parse(data)` and returns a `ParseResult` - it doesn't know or care whether the adapter wraps JavaScript or WASM. Swapping a format to Rust means writing a new adapter and changing one import line. The worker, the client API, and the entire UI stay untouched.
 
 ---
 
@@ -48,12 +48,28 @@ The parsers are already behind a clean boundary: `parser-client.ts` sends bytes 
 
 | File | Lines | Format | Approach |
 |------|-------|--------|----------|
-| `app/lib/parsers/xliff.ts` | 50 | XLIFF 1.2/2.0 | Native `DOMParser` API |
+| `app/lib/parsers/xliff.ts` | 120 | XLIFF 1.2/2.0 | `fast-xml-parser` with `preserveOrder` |
 | `app/lib/parsers/html.ts` | 122 | HTML | Regex-based tag tokenization |
-| `app/lib/parsers/docx.ts` | 666 | DOCX (OpenXML) | `fast-xml-parser` + `fflate` |
-| `app/lib/parsers/pptx.ts` | 1,560 | PPTX (OpenXML) | `fast-xml-parser` + `fflate` |
+| `app/lib/parsers/docx.ts` | 680 | DOCX (OpenXML) | `fast-xml-parser` + `fflate` |
+| `app/lib/parsers/pptx.ts` | 1,590 | PPTX (OpenXML) | `fast-xml-parser` + `fflate` |
 | `app/lib/distribute-text.ts` | 102 | - | Proportional text distribution across runs |
 | `app/lib/html-preprocessor.ts` | 95 | HTML | Annotates HTML with `data-segment-id` |
+
+### ICE abstraction layer
+
+Each parser is wrapped by an adapter that implements the `FormatParser` interface (`app/lib/ice/parser-interface.ts`):
+
+```typescript
+interface FormatParser {
+  extensions: string[];
+  parse(data: Uint8Array): ParseResult;
+  reconstruct(data: Uint8Array, translations: Map<string, string>): Uint8Array;
+}
+```
+
+`ParseResult` contains segments, an `EditorModel` (discriminated union on `mode`: `"slide"` | `"page"` | `"html-preview"` | `"segment-list"`), and extracted images. The editor model types live in `app/lib/ice/editor-model.ts` with normalized naming (`sizePt`, `Shape`, `ParagraphStyle`).
+
+Adapters (`app/lib/ice/adapters/`) wrap the raw parsers and map their output to the unified types. A registry (`app/lib/ice/adapters/registry.ts`) maps file extensions to adapters.
 
 ### Dependencies
 
@@ -63,13 +79,17 @@ The parsers are already behind a clean boundary: `parser-client.ts` sends bytes 
 ### Architecture
 
 ```
-parser-client.ts (main thread)
-  -> postMessage to parser.worker.ts (web worker)
-    -> extractByFormat() dispatches to format-specific parser
-    -> result posted back to main thread
+parser-client.ts: parseFile(data, ext)
+  -> postMessage { action: "parse", data, ext }
+  -> parser.worker.ts
+    -> registry.getParser(ext).parse(data)
+    -> returns { segments, editorModel, images }
+  -> postMessage back to main thread
+  -> convert image bytes to blob URLs
+  -> return ParseFileResult
 ```
 
-The worker handles five actions: `extract` (segments), `extractLayout` (PPTX slides), `extractVisualLayout` (PPTX + images), `extractDocxLayout` (DOCX + images), and `reconstruct` (file rebuild with translations).
+The worker handles two actions: `parse` (returns segments + editor model + images in one round-trip) and `reconstruct` (returns translated file bytes). The DOCX and PPTX parsers expose `*FromFiles` variants that accept a pre-unzipped file map, so each adapter only calls `unzipSync` once.
 
 ---
 
@@ -129,32 +149,69 @@ The `rust/` directory lives at the project root alongside `app/`. `wasm-pack bui
 
 ## Type design
 
+Rust structs must serialize to JSON that matches the `EditorModel` types in `app/lib/ice/editor-model.ts`. The `#[serde(rename_all = "camelCase")]` attribute handles the naming convention.
+
 ### Core types
 
 ```rust
 use serde::Serialize;
 
 #[derive(Serialize)]
-pub struct Segment {
+#[serde(rename_all = "camelCase")]
+pub struct ParsedSegment {
     pub id: String,
     pub source: String,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub context: Option<String>,
+    pub target: Option<String>,
 }
 
-/// Segment ID -> translated text
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ParsedImage {
+    pub media_path: String,
+    pub bytes: Vec<u8>,
+    pub content_type: String,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ParseResult {
+    pub segments: Vec<ParsedSegment>,
+    pub editor_model: EditorModel,
+    pub images: Vec<ParsedImage>,
+}
+
 pub type Translations = HashMap<String, String>;
 ```
 
-### Format-specific types (DOCX example)
+### Editor model types (mirrors `editor-model.ts`)
 
 ```rust
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase", tag = "mode")]
+pub enum EditorModel {
+    #[serde(rename = "slide")]
+    Slide { slides: Vec<Slide> },
+    #[serde(rename = "page")]
+    Page { page_dimensions: PageDimensions, blocks: Vec<DocumentBlock> },
+    #[serde(rename = "html-preview")]
+    HtmlPreview { raw_html: String },
+    #[serde(rename = "segment-list")]
+    SegmentList,
+}
+
+#[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct DocxLayout {
-    pub pages: PageDimensions,
-    pub paragraphs: Vec<ParagraphLayout>,
-    pub images: Vec<ImageData>,
+pub struct FontStyle {
+    pub size_pt: Option<f64>,
+    pub bold: Option<bool>,
+    pub italic: Option<bool>,
+    pub underline: Option<bool>,
+    pub color: Option<String>,
+    pub font_family: Option<String>,
+    pub align: Option<String>,        // "left" | "center" | "right" | "justify"
+    pub line_height: Option<f64>,
+    pub line_spacing_pt: Option<f64>,
 }
 
 #[derive(Serialize)]
@@ -162,76 +219,52 @@ pub struct DocxLayout {
 pub struct PageDimensions {
     pub width_pt: f64,
     pub height_pt: f64,
-    pub margin_top: f64,
-    pub margin_bottom: f64,
-    pub margin_left: f64,
-    pub margin_right: f64,
+    pub margin_top_pt: f64,
+    pub margin_bottom_pt: f64,
+    pub margin_left_pt: f64,
+    pub margin_right_pt: f64,
 }
 
 #[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ParagraphLayout {
-    pub text: String,
-    pub alignment: Option<Alignment>,
-    pub runs: Vec<(String, RunStyle)>,
-    pub spacing_before: f64,
-    pub spacing_after: f64,
-}
-
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-pub enum Alignment {
-    Left,
-    Center,
-    Right,
-    Justify,
-}
-
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct RunStyle {
-    pub bold: bool,
-    pub italic: bool,
-    pub underline: bool,
-    pub font_size: Option<f64>,
-    pub font_family: Option<String>,
-    pub color: Option<String>,
+#[serde(rename_all = "camelCase", tag = "type")]
+pub enum DocumentBlock {
+    #[serde(rename = "paragraph")]
+    Paragraph {
+        segment_id: String,
+        text: String,
+        style: ParagraphStyle,
+        run_style: FontStyle,
+    },
+    #[serde(rename = "image")]
+    Image { media_path: Option<String>, content_type: Option<String> },
+    #[serde(rename = "table")]
+    Table,
+    #[serde(rename = "pageBreak")]
+    PageBreak,
 }
 ```
 
-The `#[serde(rename_all = "camelCase")]` attribute ensures the JSON output matches the existing TypeScript interfaces. The React components that consume layout data don't need to change.
+### WASM entry points (per format)
 
-### WASM entry points
+Each format exports a `parse` and `reconstruct` function. The JS adapter calls these directly.
 
 ```rust
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
-pub fn extract_segments(data: &[u8], format: &str) -> Result<String, JsError> {
-    let segments = match format {
-        "xliff" | "xlf" => xliff_parser::extract_segments(data),
-        "html" | "htm" => html_parser::extract_segments(data),
-        "docx" => docx_parser::extract_segments(data),
-        "pptx" => pptx_parser::extract_segments(data),
-        _ => return Err(JsError::new(&format!("unsupported format: {}", format))),
-    }?;
-    Ok(serde_json::to_string(&segments)?)
+pub fn parse_xliff(data: &[u8]) -> Result<String, JsError> {
+    let result = xliff_parser::parse(data)?;
+    Ok(serde_json::to_string(&result)?)
 }
 
 #[wasm_bindgen]
-pub fn extract_layout(data: &[u8], format: &str) -> Result<String, JsError> {
-    // Returns JSON string matching the existing TS layout interfaces
-    ...
-}
-
-#[wasm_bindgen]
-pub fn reconstruct(data: &[u8], format: &str, translations_json: &str) -> Result<Vec<u8>, JsError> {
+pub fn reconstruct_xliff(data: &[u8], translations_json: &str) -> Result<Vec<u8>, JsError> {
     let translations: Translations = serde_json::from_str(translations_json)?;
-    ...
+    Ok(xliff_parser::reconstruct(data, &translations)?)
 }
 ```
 
-Data crosses the boundary as bytes (`&[u8]` / `Vec<u8>`) and JSON strings. `wasm-bindgen` handles `Uint8Array` <-> `&[u8]` conversion automatically. Structured data (segments, layouts, translations) is serialized as JSON on both sides. Simple, debuggable, no complex binding code.
+Data crosses the boundary as bytes (`&[u8]` / `Vec<u8>`) and JSON strings. `wasm-bindgen` handles `Uint8Array` <-> `&[u8]` conversion automatically. The adapter deserializes the JSON `ParseResult` on the JS side. Simple, debuggable, no complex binding code.
 
 ---
 
@@ -256,41 +289,48 @@ Uint8Array               <────────  Vec<u8> (reconstructed file)
 
 ### Worker integration
 
-`parser.worker.ts` gains a bridge module:
+The worker already uses the adapter registry to dispatch parsing. A Rust WASM parser plugs in by implementing the `FormatParser` interface as an adapter:
 
 ```typescript
-// wasm-bridge.ts
-import init, { extract_segments, extract_layout, reconstruct } from '../../rust/pkg';
+// app/lib/ice/adapters/xliff-wasm-adapter.ts
+import init, { parse_xliff, reconstruct_xliff } from '../../../rust/pkg';
+import type { FormatParser, ParseResult } from '../parser-interface';
 
 let initialized = false;
 
-export async function ensureInit(): Promise<void> {
+async function ensureInit(): Promise<void> {
   if (!initialized) {
     await init();
     initialized = true;
   }
 }
 
-export function extractSegments(data: Uint8Array, format: string): Segment[] {
-  const json = extract_segments(data, format);
-  return JSON.parse(json);
-}
+export const xliffWasmParser: FormatParser = {
+  extensions: ["xliff", "xlf"],
 
-export function extractLayout(data: Uint8Array, format: string): string {
-  return extract_layout(data, format);
-}
+  parse(data: Uint8Array): ParseResult {
+    // wasm-bindgen handles Uint8Array -> &[u8] automatically
+    const json = parse_xliff(data);
+    return JSON.parse(json);
+  },
 
-export function reconstructFile(
-  data: Uint8Array,
-  format: string,
-  translations: Map<string, string>
-): Uint8Array {
-  const translationsJson = JSON.stringify(Object.fromEntries(translations));
-  return reconstruct(data, format, translationsJson);
-}
+  reconstruct(data: Uint8Array, translations: Map<string, string>): Uint8Array {
+    const translationsJson = JSON.stringify(Object.fromEntries(translations));
+    return reconstruct_xliff(data, translationsJson);
+  },
+};
 ```
 
-During migration, the worker dispatches to either the JS parser or the WASM bridge based on which formats have been ported. Once all formats are ported, the bridge becomes the only path and the JS parsers are removed.
+To swap a format from JS to WASM, replace the import in `registry.ts`:
+
+```typescript
+// Before:
+import { xliffParser } from "./xliff-adapter";
+// After:
+import { xliffWasmParser as xliffParser } from "./xliff-wasm-adapter";
+```
+
+No worker changes, no client changes, no UI changes. The worker calls `getParser(ext).parse(data)` regardless of whether the adapter wraps JS or WASM. During migration both JS and WASM adapters coexist - each format switches independently.
 
 ---
 
@@ -304,23 +344,26 @@ Set up the build pipeline end-to-end with a trivial module.
 
 - Create `rust/` directory with `Cargo.toml`, `wasm-pack` config
 - Build a "passthrough" WASM function that accepts `&[u8]` and returns `Vec<u8>` unchanged
-- Load it in the web worker via `wasm-bridge.ts`, verify the round-trip
+- Create a trivial WASM adapter that implements `FormatParser` and register it in `registry.ts`
 - Add `build:wasm` to `package.json` scripts (`wasm-pack build rust --target web`)
 - Verify Vite bundles the `.wasm` file correctly
+- Verify the existing E2E tests still pass with the WASM adapter registered (even if unused)
 
-**Validates:** Rust + wasm-pack build chain, Vite WASM loading, worker data transfer, `Uint8Array` round-trip.
+**Validates:** Rust + wasm-pack build chain, Vite WASM loading, adapter registration, `Uint8Array` round-trip through `wasm-bindgen`.
 
-### Phase 1: XLIFF (50 lines)
+### Phase 1: XLIFF (120 lines)
 
 The simplest parser. Proof of concept for real parsing in Rust.
 
 - Parse XML with `quick-xml`, iterate events to find `<trans-unit>` elements
-- Extract `<source>` and `<target>` text into `Segment` structs
-- Serialize to JSON via `serde_json`
+- Extract `<source>` and `<target>` text into `ParsedSegment` structs
+- Return `ParseResult` with `EditorModel::SegmentList` and serialized segments via `serde_json`
 - Reconstruct: parse XML, update `<target>` elements, create if missing, write back
+- Create `xliff-wasm-adapter.ts` implementing `FormatParser`, swap it into `registry.ts`
 - Benchmark against the JS version
+- Run existing `xliff-adapter.test.ts` against the WASM adapter (same tests, different import)
 
-**Validates:** `quick-xml` event-based parsing works for OpenXML namespaced content, `serde` JSON output matches TypeScript expectations, the full extract-reconstruct cycle.
+**Validates:** `quick-xml` event-based parsing, `serde` JSON output matching `ParseResult` shape, full extract-reconstruct cycle through the adapter interface.
 
 ### Phase 2: HTML (122 lines)
 
@@ -328,47 +371,54 @@ Port the tag tokenizer and text extraction.
 
 - Tokenize HTML tags using Rust string slicing (replaces the regex approach)
 - Skip `<script>`, `<style>`, `<noscript>` blocks
+- Return `ParseResult` with `EditorModel::HtmlPreview { rawHtml }` 
 - Whitespace-preserving reconstruction
 - Port `html-preprocessor.ts` (segment ID annotation)
+- Create `html-wasm-adapter.ts`, swap into registry
 
 **Validates:** string-heavy parsing performance in WASM, correctness of whitespace handling.
 
-### Phase 3: DOCX (666 lines)
+### Phase 3: DOCX (680 lines)
 
 First format requiring ZIP handling. The real test.
 
 - Read ZIP with the `zip` crate, extract `word/document.xml` and relationship files
 - Parse `document.xml` with `quick-xml`
 - Extract paragraphs from `<w:p>`, runs from `<w:r>`, text from `<w:t>`
+- Return `ParseResult` with `EditorModel::Page { pageDimensions, blocks }` using normalized types (`sizePt`, `ParagraphStyle`, `FontStyle`)
 - Layout extraction: page dimensions from `<w:sectPr>`, paragraph styling from `<w:pPr>`/`<w:rPr>`, image extraction via relationship parsing
 - Port `distribute-text.ts` (proportional text distribution across multi-format runs)
 - Lossless reconstruction: modify paragraph text in XML, repack ZIP
-- Define the layout JSON schema and verify it matches existing TypeScript interfaces
+- Create `docx-wasm-adapter.ts`, swap into registry
+- Snapshot test: JSON output from Rust matches JSON output from JS adapter for the same input
 
 **Validates:** ZIP handling in WASM, complex XML navigation with namespaces, image extraction as binary data, the full extraction + layout + reconstruction pipeline.
 
-### Phase 4: PPTX (1,560 lines)
+### Phase 4: PPTX (1,590 lines)
 
 The most complex parser. Multiple XML files per slide, master/layout inheritance, theme colors, shape geometry.
 
 - Slide XML parsing from `ppt/slides/slide*.xml`
 - Theme color extraction from `ppt/theme/theme1.xml`
+- Return `ParseResult` with `EditorModel::Slide { slides }` using normalized types (`Shape`, `TextRegion`, `SlideBackground`)
 - Text region geometry: positions from `<a:xfrm>`, EMU-to-pixel conversion
-- Font style extraction from `<a:rPr>`
+- Font style extraction from `<a:rPr>` mapped to `FontStyle { sizePt, bold, ... }`
 - Shape fills, backgrounds, images
 - Master slide text style inheritance from `ppt/slideMasters/` and `ppt/slideLayouts/`
 - Grouped shape handling (`<p:grpSp>` with nested transforms)
 - Reconstruction: text replacement in slide XML, ZIP repack
+- Create `pptx-wasm-adapter.ts`, swap into registry
 
-**Validates:** multi-file ZIP navigation, the most complex tree traversal in the codebase, real-world performance on large presentations.
+**Validates:** multi-file ZIP navigation, the most complex tree traversal in the codebase, real-world performance on large presentations. All existing E2E tests pass with zero changes.
 
 ### Phase 5: Cleanup
 
-- Remove `app/lib/parsers/xliff.ts`, `html.ts`, `docx.ts`, `pptx.ts`
+- Remove JS parser files: `app/lib/parsers/xliff.ts`, `html.ts`, `docx.ts`, `pptx.ts`
+- Remove JS adapters: `app/lib/ice/adapters/xliff-adapter.ts`, `html-adapter.ts`, `docx-adapter.ts`, `pptx-adapter.ts`
 - Remove `app/lib/distribute-text.ts` (ported to Rust in Phase 3)
 - Remove `fast-xml-parser` and `fflate` from `package.json`
-- Simplify `wasm-bridge.ts` (remove format dispatch, it's the only path now)
-- Update tests to run against the WASM parsers
+- WASM adapters become the only path in `registry.ts`
+- Run full test suite: `npx vitest run && npx playwright test`
 
 ---
 
@@ -446,12 +496,14 @@ The current TS parsers query a pre-built object tree (`node['a:rPr'][0]`). `quic
 ## What doesn't change
 
 - Upload flow
-- `parser-client.ts` API (same function signatures, same return types)
-- Worker message protocol (same actions, same message shapes)
+- `FormatParser` interface (`app/lib/ice/parser-interface.ts`)
+- `EditorModel` types (`app/lib/ice/editor-model.ts`)
+- Worker protocol (2 actions: `parse`, `reconstruct`)
+- `parseFile()` client API
 - SQLite storage (files + TM)
 - TM matching logic
 - Translation engine (Chrome Translator API)
-- Canvas editor (consumes layout JSON - doesn't know or care what produced it)
+- Canvas editor (consumes `EditorModel` - doesn't know or care what produced it)
 - Service worker / offline support
 
 ---
@@ -474,13 +526,11 @@ This profiling takes an afternoon and determines whether the rewrite is worth th
 
 ## Open questions
 
-1. **Layout JSON schema contract.** The current TypeScript layout interfaces (`DocxDocumentLayout`, `SlideLayout`, `TextRegion`, etc.) are consumed directly by React components. The Rust structs need to produce JSON that matches these shapes exactly. Should we generate TypeScript types from the Rust structs (via `ts-rs` crate), or maintain them manually with snapshot tests? `ts-rs` is more reliable but adds a build step.
+1. **Event-based vs tree-based parsing.** `quick-xml` is event-based (SAX-style). The current JS parsers query an object tree. For simple formats (XLIFF, HTML) events are fine. For PPTX with deeply nested shapes inheriting from masters, an event-based approach may be awkward. Should DOCX/PPTX build a lightweight tree from events first, or can the parsers be written directly against the event stream? Phase 1 will inform this.
 
-2. **Event-based vs tree-based parsing.** `quick-xml` is event-based (SAX-style). The current parsers query an object tree. For simple formats (XLIFF, HTML) events are fine. For PPTX with deeply nested shapes inheriting from masters, an event-based approach may be awkward. Should DOCX/PPTX build a lightweight tree from events first, or can the parsers be written directly against the event stream? Phase 1 will inform this.
+2. **Pre-built WASM for non-Rust contributors.** Should the `rust/pkg/` output be committed to the repo so contributors who only touch TypeScript don't need Rust installed? Or should CI produce the artifact and contributors fetch it? Committing binaries has trade-offs (repo size, stale builds) but simplifies onboarding.
 
-3. **Pre-built WASM for non-Rust contributors.** Should the `rust/pkg/` output be committed to the repo so contributors who only touch TypeScript don't need Rust installed? Or should CI produce the artifact and contributors fetch it? Committing binaries has trade-offs (repo size, stale builds) but simplifies onboarding.
-
-4. **Concurrent parsing.** WASM in a web worker is single-threaded. For a 100-slide PPTX, slides could theoretically be parsed in parallel using multiple workers or `wasm-bindgen-rayon`. Is this worth pursuing, or is single-threaded Rust fast enough? Defer until benchmarks show whether it matters.
+3. **Concurrent parsing.** WASM in a web worker is single-threaded. For a 100-slide PPTX, slides could theoretically be parsed in parallel using multiple workers or `wasm-bindgen-rayon`. Is this worth pursuing, or is single-threaded Rust fast enough? Defer until benchmarks show whether it matters.
 
 ---
 

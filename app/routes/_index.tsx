@@ -38,7 +38,7 @@ export default function Home() {
         </Link>
       </div>
 
-      <div className="mt-16 w-full max-w-4xl pb-16">
+      <div className="mt-16 w-full max-w-4xl">
         <video
           src="/demo.mp4"
           autoPlay
@@ -48,6 +48,13 @@ export default function Home() {
           className="w-full rounded-xl border border-grey-3 dark:border-grey-14 shadow-lg"
         />
       </div>
+
+      <footer className="w-full max-w-4xl mt-16 mb-8">
+        <div className="border-t border-grey-3 dark:border-grey-14 pt-4 flex justify-between text-xs text-grey-6">
+          <span>offline.cat</span>
+          <span>&copy; 2027 All rights reserved</span>
+        </div>
+      </footer>
     </main>
   );
 }
