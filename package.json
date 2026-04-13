@@ -1,5 +1,6 @@
 {
   "name": "offlinecat-project",
+  "version": "0.1.0",
   "private": true,
   "author": "mmurakaru",
   "type": "module",
