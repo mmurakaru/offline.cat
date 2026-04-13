@@ -19,7 +19,7 @@ export function startDictation(
   }
 
   const recognition = new SpeechRecognitionClass();
-  recognition.continuous = true;
+  recognition.continuous = false;
   recognition.interimResults = true;
 
   recognition.onresult = (event: { resultIndex: number; results: { length: number; [index: number]: { [index: number]: { transcript: string } } } }) => {
