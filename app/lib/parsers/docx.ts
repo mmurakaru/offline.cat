@@ -495,11 +495,12 @@ export interface DocxImageData {
   contentType: string;
 }
 
-export function extractDocxLayout(data: Uint8Array): {
+export function extractDocxLayoutFromFiles(
+  files: Record<string, Uint8Array>,
+): {
   layout: DocxDocumentLayout;
   mediaPaths: string[];
 } {
-  const files = unzipSync(data);
   const documentXml = files["word/document.xml"];
   if (!documentXml) {
     return {
@@ -530,6 +531,13 @@ export function extractDocxLayout(data: Uint8Array): {
   return { layout, mediaPaths };
 }
 
+export function extractDocxLayout(data: Uint8Array): {
+  layout: DocxDocumentLayout;
+  mediaPaths: string[];
+} {
+  return extractDocxLayoutFromFiles(unzipSync(data));
+}
+
 export function extractDocxImages(
   files: Record<string, Uint8Array>,
   mediaPaths: string[],
@@ -549,14 +557,18 @@ export function extractDocxImages(
   return images;
 }
 
-export function extractSegments(data: Uint8Array): ExtractedSegment[] {
-  const files = unzipSync(data);
-
+export function extractSegmentsFromFiles(
+  files: Record<string, Uint8Array>,
+): ExtractedSegment[] {
   const documentXml = files["word/document.xml"];
   if (!documentXml) return [];
 
   const xml = new TextDecoder().decode(documentXml);
   return extractTextFromDocumentXml(xml);
+}
+
+export function extractSegments(data: Uint8Array): ExtractedSegment[] {
+  return extractSegmentsFromFiles(unzipSync(data));
 }
 
 export function replaceTextInDocumentXml(

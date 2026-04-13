@@ -1,15 +1,9 @@
 // Thin async wrapper around parser.worker.ts.
 // Keeps the main thread free during file parsing and reconstruction.
 
+import type { EditorModel } from "./ice/editor-model";
+import type { ParsedSegment } from "./ice/parser-interface";
 import type { ParserRequest } from "../workers/parser.worker";
-import type { DocxDocumentLayout } from "./parsers/docx";
-import type {
-  FontStyle,
-  ImageReference,
-  ShapeFill,
-  SlideBackground,
-  VisualShape,
-} from "./parsers/pptx";
 
 let worker: Worker | null = null;
 
@@ -40,60 +34,33 @@ function postMessage<T extends { action: string }>(
   });
 }
 
-// Extracts translatable segments from a file off the main thread.
-export async function extractSegments(
-  data: Uint8Array,
-  ext: string,
-): Promise<{ id: string; source: string }[]> {
-  const response = await postMessage<{
-    action: "extract";
-    segments: { id: string; source: string }[];
-  }>({ action: "extract", data, ext });
-  return response.segments;
-}
-
-export interface SlideLayout {
-  slideIndex: number;
-  width: number;
-  height: number;
-  regions: {
-    segmentId: string;
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-    fontStyle?: FontStyle;
-    zIndex: number;
-  }[];
-  shapes: VisualShape[];
-  background?: SlideBackground;
-}
-
-export type {
-  DocxDocumentLayout,
-  FontStyle,
-  ImageReference,
-  ShapeFill,
-  SlideBackground,
-  VisualShape,
-};
-
-export interface DocxLayoutResult {
-  layout: DocxDocumentLayout | null;
+export interface ParseFileResult {
+  segments: ParsedSegment[];
+  editorModel: EditorModel;
   imageUrls: Map<string, string>;
 }
 
-export async function extractDocxLayoutFromWorker(
+// Parses a file completely: segments + editor model + image blob URLs.
+export async function parseFile(
   data: Uint8Array,
-): Promise<DocxLayoutResult> {
+  ext: string,
+): Promise<ParseFileResult> {
   const response = await postMessage<{
-    action: "extractDocxLayout";
-    layout: DocxDocumentLayout | null;
-    images: { mediaPath: string; bytes: Uint8Array; contentType: string }[];
-  }>({ action: "extractDocxLayout", data, ext: "docx" });
+    action: "parse";
+    result?: {
+      segments: ParsedSegment[];
+      editorModel: EditorModel;
+      images: { mediaPath: string; bytes: Uint8Array; contentType: string }[];
+    };
+    error?: string;
+  }>({ action: "parse", data, ext });
+
+  if (response.error || !response.result) {
+    throw new Error(response.error ?? "Parse failed: no result from worker");
+  }
 
   const imageUrls = new Map<string, string>();
-  for (const image of response.images ?? []) {
+  for (const image of response.result.images ?? []) {
     const bytes =
       image.bytes instanceof ArrayBuffer
         ? new Uint8Array(image.bytes)
@@ -102,52 +69,11 @@ export async function extractDocxLayoutFromWorker(
     imageUrls.set(image.mediaPath, URL.createObjectURL(blob));
   }
 
-  return { layout: response.layout ?? null, imageUrls };
-}
-
-export async function extractLayout(
-  data: Uint8Array,
-  ext: string,
-): Promise<SlideLayout[]> {
-  const response = await postMessage<{
-    action: "extractLayout";
-    layouts: SlideLayout[];
-  }>({ action: "extractLayout", data, ext });
-  return response.layouts ?? [];
-}
-
-export interface VisualLayoutResult {
-  layouts: SlideLayout[];
-  imageUrls: Map<string, string>;
-}
-
-export async function extractVisualLayout(
-  data: Uint8Array,
-  ext: string,
-): Promise<VisualLayoutResult> {
-  const response = await postMessage<{
-    action: "extractVisualLayout";
-    layouts: SlideLayout[];
-    images: { mediaPath: string; bytes: Uint8Array; contentType: string }[];
-  }>({ action: "extractVisualLayout", data, ext });
-
-  const imageUrls = new Map<string, string>();
-  for (const image of response.images ?? []) {
-    const bytes =
-      image.bytes instanceof ArrayBuffer
-        ? new Uint8Array(image.bytes)
-        : image.bytes;
-    const blob = new Blob([bytes], { type: image.contentType });
-    imageUrls.set(image.mediaPath, URL.createObjectURL(blob));
-  }
-
-  return { layouts: response.layouts ?? [], imageUrls };
-}
-
-export function revokeImageUrls(imageUrls: Map<string, string>): void {
-  for (const url of imageUrls.values()) {
-    URL.revokeObjectURL(url);
-  }
+  return {
+    segments: response.result.segments,
+    editorModel: response.result.editorModel,
+    imageUrls,
+  };
 }
 
 // Reconstructs a translated file off the main thread.
@@ -172,3 +98,47 @@ export async function reconstructFile(
       : (response.result as Uint8Array).buffer;
   return new Uint8Array(buffer as ArrayBuffer);
 }
+
+export function revokeImageUrls(imageUrls: Map<string, string>): void {
+  for (const url of imageUrls.values()) {
+    URL.revokeObjectURL(url);
+  }
+}
+
+// ---- Backward-compatible type re-exports ----
+// Components (SlideCanvas, NavigatorSidebar, etc.) still import these types.
+// They will be removed when those components are updated to use editor-model types.
+
+export type {
+  DocxDocumentLayout,
+  DocxPageDimensions,
+  DocxParagraphLayout,
+  DocxBlock,
+} from "./parsers/docx";
+
+export type {
+  FontStyle,
+  ImageReference,
+  ShapeFill,
+  SlideBackground,
+  VisualShape,
+} from "./parsers/pptx";
+
+export interface SlideLayout {
+  slideIndex: number;
+  width: number;
+  height: number;
+  regions: {
+    segmentId: string;
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    fontStyle?: import("./parsers/pptx").FontStyle;
+    zIndex: number;
+  }[];
+  shapes: import("./parsers/pptx").VisualShape[];
+  background?: import("./parsers/pptx").SlideBackground;
+  defaultTextColor?: string;
+}
+

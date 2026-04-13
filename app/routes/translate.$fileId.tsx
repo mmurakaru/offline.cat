@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import {
   Button,
   ComboBox,
@@ -15,10 +15,9 @@ import {
 } from "react-router";
 import { ArrowRightIcon } from "../components/arrow-right-icon";
 import { ConfirmDialog } from "../components/ConfirmDialog";
-import { DocumentCanvas } from "../components/DocumentCanvas";
 import { DownloadIcon } from "../components/download-icon";
+import { EditorCanvas } from "../components/EditorCanvas";
 import { ErrorIcon } from "../components/error-icon";
-import { HtmlCanvas } from "../components/HtmlCanvas";
 import { InspectorPanel } from "../components/InspectorPanel";
 import { InspectorToggleIcon } from "../components/inspector-toggle-icon";
 import { LoadingIcon } from "../components/loading-icon";
@@ -26,33 +25,20 @@ import { NavigatorSidebar } from "../components/NavigatorSidebar";
 import { OutlineSidebar } from "../components/OutlineSidebar";
 import { OfflineIcon } from "../components/offline-icon";
 import { PlusIcon } from "../components/plus-icon";
-import { SegmentListEditor } from "../components/SegmentListEditor";
 import {
   type SidebarMode,
   SidebarViewToggle,
 } from "../components/SidebarViewToggle";
-import { SlideCanvas } from "../components/SlideCanvas";
 import { MyToastRegion, queue } from "../components/ToastRegion";
 import { TranslateIcon } from "../components/translate-icon";
 import { useEditorHotkeys } from "../hooks/useEditorHotkeys";
+import { useFileParsing } from "../hooks/useFileParsing";
 import type { Segment } from "../hooks/useTranslation";
 import { useTranslation } from "../hooks/useTranslation";
 import { cn } from "../lib/cn";
-import type { FileRecord } from "../lib/db";
-import { getDB } from "../lib/db";
-import { detectLanguage } from "../lib/language-detector";
-import {
-  type DocxDocumentLayout,
-  extractDocxLayoutFromWorker,
-  extractSegments,
-  extractVisualLayout,
-  reconstructFile,
-  revokeImageUrls,
-  type SlideLayout,
-} from "../lib/parser-client";
+import { reconstructFile } from "../lib/parser-client";
 import {
   addTranslationMemoryEntry,
-  findTranslationMemoryMatch,
 } from "../lib/translation-memory";
 import { translateSegments } from "../lib/translator";
 
@@ -274,128 +260,45 @@ function getFileTypeBadge(filename: string): {
 export default function Translate() {
   const { fileId } = useParams();
   const navigate = useNavigate();
-  const [fileName, setFileName] = useState("");
-  const [sourceLanguage, setSourceLanguage] = useState("");
-  const [unsupportedSource, setUnsupportedSource] = useState(false);
   const [targetLanguage, setTargetLanguage] = useState("");
   const [activeSlide, setActiveSlide] = useState(0);
   const [activeSegmentId, setActiveSegmentId] = useState<string | null>(null);
-  const [slideLayouts, setSlideLayouts] = useState<SlideLayout[]>([]);
-  const [docxLayout, setDocxLayout] = useState<DocxDocumentLayout | null>(null);
-  const [rawHtml, setRawHtml] = useState<string>("");
-  const [imageUrls, setImageUrls] = useState<Map<string, string>>(new Map());
-  const [fileType, setFileType] = useState("");
   const [sidebarMode, setSidebarMode] = useState<SidebarMode>("outline");
   const [isDownloading, setIsDownloading] = useState(false);
   const [inspectorOpen, setInspectorOpen] = useState(false);
   const [zoomPercent, setZoomPercent] = useState<number | "fit">("fit");
   const [resetViewKey, setResetViewKey] = useState(0);
-  const fileDataRef = useRef<{ data: Uint8Array; ext: string } | null>(null);
   const { segments, setSegments, isTranslating, translate } = useTranslation();
 
-  // Load file from SQLite
-  useEffect(() => {
-    const loadFile = async () => {
-      const db = await getDB();
-      const file = await db.getOne<FileRecord>(
-        "SELECT * FROM files WHERE id = ?",
-        [fileId!],
-      );
-      if (!file) {
-        navigate("/create");
-        return;
-      }
+  const onNavigateAway = useCallback(() => navigate("/create"), [navigate]);
+  const {
+    fileName,
+    fileType,
+    editorModel,
+    imageUrls,
+    sourceLanguage,
+    setSourceLanguage,
+    unsupportedSource,
+    fileData,
+  } = useFileParsing({
+    fileId,
+    sourceLanguage: "",
+    targetLanguage,
+    onNavigateAway,
+    setSegments,
+  });
 
-      setFileName(file.name);
+  // Auto-set sidebar mode when editor model changes
+  const prevEditorModeRef = useRef<string | null>(null);
+  if (editorModel && editorModel.mode !== prevEditorModeRef.current) {
+    prevEditorModeRef.current = editorModel.mode;
+    if (editorModel.mode === "slide" && sidebarMode !== "navigator") {
+      setSidebarMode("navigator");
+    }
+  }
 
-      const data =
-        file.data instanceof Uint8Array
-          ? file.data
-          : new Uint8Array(file.data as ArrayBuffer);
-      const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
-      fileDataRef.current = { data, ext };
-      if (fileType !== ext) {
-        setFileType(ext);
-        if (ext === "pptx") setSidebarMode("navigator");
-      }
-
-      const rawSegments = await extractSegments(data, ext);
-
-      // Auto-detect source language from first segments
-      if (!sourceLanguage && rawSegments.length > 0) {
-        const sampleText = rawSegments
-          .slice(0, 10)
-          .map((segment) => segment.source)
-          .join(" ");
-        const detected = await detectLanguage(sampleText);
-        if (detected) {
-          setSourceLanguage(detected);
-          setUnsupportedSource(false);
-          const validTargets = getTargetLanguages(detected);
-          if (validTargets.length === 1) {
-            setTargetLanguage(validTargets[0].id);
-          }
-        } else {
-          setUnsupportedSource(true);
-        }
-      }
-
-      if (ext === "pptx") {
-        const result = await extractVisualLayout(data, ext);
-        setSlideLayouts(result.layouts);
-        setImageUrls(result.imageUrls);
-      } else if (ext === "docx") {
-        const result = await extractDocxLayoutFromWorker(data);
-        setDocxLayout(result.layout);
-        setImageUrls(result.imageUrls);
-      } else if (ext === "html" || ext === "htm") {
-        setRawHtml(new TextDecoder().decode(data));
-      }
-
-      const processed: Segment[] = await Promise.all(
-        rawSegments.map(async (segment) => {
-          const match = await findTranslationMemoryMatch(
-            segment.source,
-            sourceLanguage,
-            targetLanguage,
-          );
-
-          if (match.score >= 95) {
-            return {
-              ...segment,
-              target: match.translation,
-              origin: "translationMemory" as const,
-              translationMemoryScore: match.score,
-            };
-          }
-
-          if (match.score >= 75) {
-            return {
-              ...segment,
-              translationMemorySuggestion: match.translation,
-              translationMemoryScore: match.score,
-              needsTranslation: true,
-            };
-          }
-
-          return { ...segment, needsTranslation: true };
-        }),
-      );
-
-      setSegments(processed);
-    };
-
-    loadFile().catch((error) => {
-      console.error("Failed to load file:", error);
-    });
-  }, [fileId, navigate, sourceLanguage, targetLanguage, setSegments, fileType]);
-
-  // Revoke blob URLs on cleanup
-  useEffect(() => {
-    return () => {
-      revokeImageUrls(imageUrls);
-    };
-  }, [imageUrls]);
+  const fileDataRef = useRef<{ data: Uint8Array; ext: string } | null>(null);
+  if (fileData) fileDataRef.current = fileData;
 
   const handleTranslate = useCallback(async () => {
     await translate(segments, sourceLanguage, targetLanguage);
@@ -463,20 +366,22 @@ export default function Translate() {
   const handleSegmentClick = useCallback(
     (segmentId: string) => {
       setActiveSegmentId(segmentId);
-      // Find which slide this segment belongs to
-      for (const layout of slideLayouts) {
-        const found = layout.regions.some(
-          (region) => region.segmentId === segmentId,
-        );
-        if (found) {
-          setActiveSlide(
-            slideLayouts.findIndex((l) => l.slideIndex === layout.slideIndex),
+      // Find which slide this segment belongs to (slide mode only)
+      if (editorModel?.mode === "slide") {
+        for (const slide of editorModel.slides) {
+          const found = slide.regions.some(
+            (region) => region.segmentId === segmentId,
           );
-          break;
+          if (found) {
+            setActiveSlide(
+              editorModel.slides.findIndex((s) => s.index === slide.index),
+            );
+            break;
+          }
         }
       }
     },
-    [slideLayouts],
+    [editorModel],
   );
 
   const handleDownload = useCallback(async () => {
@@ -552,34 +457,119 @@ export default function Translate() {
   const handleSlideClick = useCallback(
     (slideIndex: number) => {
       setActiveSlide(slideIndex);
-      const layout = slideLayouts[slideIndex];
-      if (layout?.regions.length > 0) {
-        setActiveSegmentId(layout.regions[0].segmentId);
+      if (editorModel?.mode === "slide") {
+        const slide = editorModel.slides[slideIndex];
+        if (slide?.regions.length > 0) {
+          setActiveSegmentId(slide.regions[0].segmentId);
+        }
       }
     },
-    [slideLayouts],
+    [editorModel],
   );
 
-  const _hasCanvas =
-    slideLayouts.length > 0 || docxLayout !== null || rawHtml !== "";
-
   // Count pages/slides for the collapsed left sidebar nav
-  const docxPageCount = useMemo(() => {
-    if (!docxLayout) return 0;
-    let count = 1;
-    for (const block of docxLayout.blocks) {
-      if (block.type === "pageBreak") count++;
+  const collapsedNavCount = useMemo(() => {
+    if (!editorModel) return 0;
+    if (editorModel.mode === "slide") return editorModel.slides.length;
+    if (editorModel.mode === "page") {
+      let count = 1;
+      for (const block of editorModel.blocks) {
+        if (block.type === "pageBreak") count++;
+      }
+      return count;
     }
-    return count;
-  }, [docxLayout]);
+    return 0;
+  }, [editorModel]);
 
-  const collapsedNavCount =
-    fileType === "pptx"
-      ? slideLayouts.length
-      : fileType === "docx"
-        ? docxPageCount
-        : 0;
-  const currentLayout = slideLayouts[activeSlide];
+  // Compat bridges for sidebar components that still use old types (Phase 5 removes these)
+  const slideLayoutsCompat = useMemo(() => {
+    if (editorModel?.mode !== "slide") return [];
+    return editorModel.slides.map((slide) => ({
+      slideIndex: slide.index,
+      width: slide.width,
+      height: slide.height,
+      regions: slide.regions.map((r) => ({
+        segmentId: r.segmentId,
+        x: r.x,
+        y: r.y,
+        width: r.width,
+        height: r.height,
+        fontStyle: r.fontStyle
+          ? {
+              sizePoints: r.fontStyle.sizePt,
+              bold: r.fontStyle.bold,
+              italic: r.fontStyle.italic,
+              color: r.fontStyle.color,
+              align: r.fontStyle.align as "left" | "center" | "right" | undefined,
+              lineHeight: r.fontStyle.lineHeight,
+              lineSpacingPoints: r.fontStyle.lineSpacingPt,
+            }
+          : undefined,
+        zIndex: r.zIndex,
+      })),
+      shapes: slide.shapes.map((s) => ({
+        x: s.x,
+        y: s.y,
+        width: s.width,
+        height: s.height,
+        fill: s.fill
+          ? { type: "solid" as const, color: s.fill.color, opacity: s.fill.opacity }
+          : undefined,
+        image: s.image
+          ? { mediaPath: s.image.mediaPath, contentType: s.image.contentType }
+          : undefined,
+        zIndex: s.zIndex,
+        source: s.source,
+      })),
+      background: slide.background
+        ? {
+            fill: slide.background.fill
+              ? { type: "solid" as const, color: slide.background.fill.color, opacity: slide.background.fill.opacity }
+              : undefined,
+            image: slide.background.image
+              ? { mediaPath: slide.background.image.mediaPath, contentType: slide.background.image.contentType }
+              : undefined,
+          }
+        : undefined,
+      defaultTextColor: slide.defaultTextColor,
+    }));
+  }, [editorModel]);
+
+  const docxLayoutCompat = useMemo(() => {
+    if (editorModel?.mode !== "page") return null;
+    return {
+      pageDimensions: editorModel.pageDimensions,
+      blocks: editorModel.blocks.map((block) => {
+        if (block.type === "paragraph") {
+          return {
+            type: "paragraph" as const,
+            segmentId: block.segmentId,
+            text: block.text,
+            paragraphStyle: {
+              alignment: block.style.alignment,
+              spacingBeforePt: block.style.spacingBeforePt,
+              spacingAfterPt: block.style.spacingAfterPt,
+              indentLeftPt: block.style.indentLeftPt,
+              indentFirstLinePt: block.style.indentFirstLinePt,
+            },
+            dominantRunStyle: {
+              bold: block.runStyle.bold,
+              italic: block.runStyle.italic,
+              underline: block.runStyle.underline,
+              sizePoints: block.runStyle.sizePt,
+              color: block.runStyle.color,
+              fontFamily: block.runStyle.fontFamily,
+            },
+          };
+        }
+        if (block.type === "image") {
+          return { type: "image" as const, mediaPath: block.mediaPath, contentType: block.contentType };
+        }
+        if (block.type === "table") return { type: "table" as const };
+        return { type: "pageBreak" as const };
+      }),
+    };
+  }, [editorModel]);
 
   const fileTypeBadge = getFileTypeBadge(fileName);
   const displayName = fileType
@@ -610,9 +600,9 @@ export default function Translate() {
           />
         ) : (
           <div className="flex-1 overflow-hidden">
-            {sidebarMode === "navigator" && slideLayouts.length > 0 ? (
+            {sidebarMode === "navigator" && editorModel?.mode === "slide" ? (
               <NavigatorSidebar
-                layouts={slideLayouts}
+                layouts={slideLayoutsCompat}
                 segments={segments}
                 activeSlide={activeSlide}
                 imageUrls={imageUrls}
@@ -621,8 +611,8 @@ export default function Translate() {
             ) : (
               <OutlineSidebar
                 segments={segments}
-                layouts={slideLayouts}
-                docxLayout={docxLayout}
+                layouts={slideLayoutsCompat}
+                docxLayout={docxLayoutCompat}
                 fileType={fileType}
                 activeSegmentId={activeSegmentId}
                 onSegmentFocus={handleSegmentClick}
@@ -795,9 +785,11 @@ export default function Translate() {
               <div className="flex items-center justify-center h-full">
                 <p className="text-grey-6">No translatable segments found.</p>
               </div>
-            ) : currentLayout ? (
-              <SlideCanvas
-                layout={currentLayout}
+            ) : editorModel ? (
+              <EditorCanvas
+                model={editorModel}
+                imageUrls={imageUrls}
+                activeSlideIndex={activeSlide}
                 segments={segments}
                 activeSegmentId={activeSegmentId}
                 onSegmentFocus={setActiveSegmentId}
@@ -805,48 +797,11 @@ export default function Translate() {
                 onConfirm={handleConfirm}
                 onTranslateSegment={handleTranslateSegment}
                 canTranslate={!!sourceLanguage && !!targetLanguage}
-                imageUrls={imageUrls}
                 zoomPercent={zoomPercent}
                 onZoomChange={setZoomPercent}
                 resetViewKey={resetViewKey}
               />
-            ) : docxLayout ? (
-              <DocumentCanvas
-                layout={docxLayout}
-                segments={segments}
-                activeSegmentId={activeSegmentId}
-                onSegmentFocus={setActiveSegmentId}
-                onTargetChange={handleTargetChange}
-                onConfirm={handleConfirm}
-                onTranslateSegment={handleTranslateSegment}
-                canTranslate={!!sourceLanguage && !!targetLanguage}
-                imageUrls={imageUrls}
-                zoomPercent={zoomPercent}
-                onZoomChange={setZoomPercent}
-                resetViewKey={resetViewKey}
-              />
-            ) : rawHtml ? (
-              <HtmlCanvas
-                rawHtml={rawHtml}
-                segments={segments}
-                activeSegmentId={activeSegmentId}
-                onSegmentFocus={setActiveSegmentId}
-                onTargetChange={handleTargetChange}
-                onConfirm={handleConfirm}
-                onTranslateSegment={handleTranslateSegment}
-                canTranslate={!!sourceLanguage && !!targetLanguage}
-              />
-            ) : (
-              <SegmentListEditor
-                segments={segments}
-                activeSegmentId={activeSegmentId}
-                onSegmentFocus={setActiveSegmentId}
-                onTargetChange={handleTargetChange}
-                onConfirm={handleConfirm}
-                onTranslateSegment={handleTranslateSegment}
-                canTranslate={!!sourceLanguage && !!targetLanguage}
-              />
-            )}
+            ) : null}
           </div>
 
           {/* Right sidebar - inspector */}

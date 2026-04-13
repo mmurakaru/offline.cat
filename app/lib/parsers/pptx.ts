@@ -176,8 +176,9 @@ export function extractTextFromSlideXml(
   return segments;
 }
 
-export function extractSegments(data: Uint8Array): ExtractedSegment[] {
-  const files = unzipSync(data);
+export function extractSegmentsFromFiles(
+  files: Record<string, Uint8Array>,
+): ExtractedSegment[] {
   const segments: ExtractedSegment[] = [];
 
   for (const [path, content] of Object.entries(files)) {
@@ -189,6 +190,10 @@ export function extractSegments(data: Uint8Array): ExtractedSegment[] {
   }
 
   return segments;
+}
+
+export function extractSegments(data: Uint8Array): ExtractedSegment[] {
+  return extractSegmentsFromFiles(unzipSync(data));
 }
 
 export function replaceTextInSlideXml(
@@ -1388,11 +1393,12 @@ function resolveInheritedBackground(
   return undefined;
 }
 
-export function extractPptxLayout(data: Uint8Array): {
+export function extractPptxLayoutFromFiles(
+  files: Record<string, Uint8Array>,
+): {
   layouts: SlideLayout[];
   mediaPaths: string[];
 } {
-  const files = unzipSync(data);
   const layouts: SlideLayout[] = [];
   const mediaPathSet = new Set<string>();
 
@@ -1555,6 +1561,13 @@ export function extractPptxLayout(data: Uint8Array): {
 
   layouts.sort((a, b) => a.slideIndex - b.slideIndex);
   return { layouts, mediaPaths: [...mediaPathSet] };
+}
+
+export function extractPptxLayout(data: Uint8Array): {
+  layouts: SlideLayout[];
+  mediaPaths: string[];
+} {
+  return extractPptxLayoutFromFiles(unzipSync(data));
 }
 
 export function reconstructPptx(

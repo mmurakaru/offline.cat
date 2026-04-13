@@ -22,6 +22,7 @@ export function meta() {
 export default function Create() {
   const navigate = useNavigate();
   const [isDragging, setIsDragging] = useState(false);
+  const supported = typeof window !== "undefined" && "Translator" in globalThis;
 
   const handleFile = useCallback(
     async (file: File) => {
@@ -70,17 +71,19 @@ export default function Create() {
           <DocumentIcon />
         </p>
 
-        <FileTrigger onSelect={onSelect} acceptedFileTypes={ACCEPTED_TYPES}>
-          <Button className="w-full cursor-pointer outline-none">
+        <FileTrigger onSelect={supported ? onSelect : undefined} acceptedFileTypes={ACCEPTED_TYPES}>
+          <Button className={cn("w-full outline-none", supported ? "cursor-pointer" : "cursor-not-allowed")} isDisabled={!supported}>
             <DropZone
-              onDropEnter={() => setIsDragging(true)}
-              onDropExit={() => setIsDragging(false)}
-              onDrop={onDrop}
+              onDropEnter={supported ? () => setIsDragging(true) : undefined}
+              onDropExit={supported ? () => setIsDragging(false) : undefined}
+              onDrop={supported ? onDrop : undefined}
               className={cn(
-                "w-full border-2 border-dashed rounded-xl p-12 text-center transition-colors cursor-pointer",
-                isDragging
-                  ? "border-primary-5 bg-primary-5/10 dark:bg-primary-10"
-                  : "border-grey-4 dark:border-ui-divider hover:border-grey-5 dark:hover:border-grey-10",
+                "w-full border-2 border-dashed rounded-xl p-12 text-center transition-colors",
+                !supported
+                  ? "border-grey-4 dark:border-ui-divider opacity-50 cursor-not-allowed"
+                  : isDragging
+                    ? "border-primary-5 bg-primary-5/10 dark:bg-primary-10 cursor-pointer"
+                    : "border-grey-4 dark:border-ui-divider hover:border-grey-5 dark:hover:border-grey-10 cursor-pointer",
               )}
             >
               <p className="text-sm text-grey-6">
@@ -94,16 +97,22 @@ export default function Create() {
         </FileTrigger>
       </div>
 
-      <p className="text-xs text-grey-6">
-        For offline usage,{" "}
-        <a
-          href="chrome://on-device-translation-internals/"
-          className="underline hover:text-grey-8 dark:hover:text-grey-4"
-        >
-          download required language packs
-        </a>{" "}
-        first.
-      </p>
+      {supported ? (
+        <p className="text-xs text-grey-6">
+          For offline usage,{" "}
+          <a
+            href="chrome://on-device-translation-internals/"
+            className="underline hover:text-grey-8 dark:hover:text-grey-4"
+          >
+            download required language packs
+          </a>{" "}
+          first.
+        </p>
+      ) : (
+        <p className="text-xs text-red-400">
+          Requires Chrome 138+ with on-device translation enabled.
+        </p>
+      )}
 
       {import.meta.env.DEV && (
         <button

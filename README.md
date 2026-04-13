@@ -69,6 +69,24 @@ Or connect the repo to the Cloudflare Pages dashboard with:
 - Build command: `npm run build`
 - Output directory: `build/client`
 
+## Releasing
+
+1. Bump the version in `package.json`
+2. Commit, tag, and push:
+
+```bash
+git add package.json
+git commit -m "release v<version>"
+git tag v<version>
+git push origin main --follow-tags
+```
+
+3. Create a GitHub release:
+
+```bash
+gh release create v<version> --title "v<version>" --notes "Release notes here"
+```
+
 ### Docker Deployment
 
 To build and run using Docker:
