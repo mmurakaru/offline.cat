@@ -39,6 +39,7 @@ import type { Segment } from "../hooks/useTranslation";
 import { useTranslation } from "../hooks/useTranslation";
 import { cn } from "../lib/cn";
 import i18n from "../lib/i18n";
+import { localePath } from "../lib/localePath";
 import { reconstructFile } from "../lib/parser-client";
 import { addTranslationMemoryEntry } from "../lib/translation-memory";
 import { translateSegments } from "../lib/translator";
@@ -274,7 +275,10 @@ export default function Translate() {
   const [resetViewKey, setResetViewKey] = useState(0);
   const { segments, setSegments, isTranslating, translate } = useTranslation();
 
-  const onNavigateAway = useCallback(() => navigate("/create"), [navigate]);
+  const onNavigateAway = useCallback(
+    () => navigate(localePath("/create")),
+    [navigate],
+  );
   const {
     fileName,
     fileType,
@@ -608,7 +612,7 @@ export default function Translate() {
       >
         <div className="py-2 px-1 shrink-0">
           <Link
-            to="/"
+            to={localePath("/")}
             className="inline-flex items-center justify-center h-9 w-9 shrink-0"
           >
             <OfflineIcon className="w-9 bg-black dark:bg-white" />
@@ -667,7 +671,7 @@ export default function Translate() {
                   title={t("editor.discardTitle")}
                   description={t("editor.discardDescription")}
                   confirmLabel={t("editor.discardConfirm")}
-                  onConfirm={() => navigate("/create")}
+                  onConfirm={() => navigate(localePath("/create"))}
                 >
                   <Button
                     className="p-2 rounded-lg hover:bg-black/5 active:bg-black/10 dark:hover:bg-white/10 dark:active:bg-white/15 cursor-pointer text-grey-7 dark:text-grey-6 transition-colors"
@@ -678,7 +682,7 @@ export default function Translate() {
                 </ConfirmDialog>
               ) : (
                 <Button
-                  onPress={() => navigate("/create")}
+                  onPress={() => navigate(localePath("/create"))}
                   className="p-2 rounded-lg hover:bg-black/5 active:bg-black/10 dark:hover:bg-white/10 dark:active:bg-white/15 cursor-pointer text-grey-7 dark:text-grey-6 transition-colors"
                   aria-label={t("editor.newFile")}
                 >
@@ -852,8 +856,8 @@ export default function Translate() {
             ) : (
               <InspectorCollapsedIcons segment={activeSegment} />
             )}
-            <div className="mt-auto flex flex-col items-center pb-2">
-              <LocaleSwitcher className="flex-col" />
+            <div className={cn("mt-auto pb-2", inspectorOpen ? "flex justify-end px-2.5" : "flex flex-col items-center")}>
+              <LocaleSwitcher className={inspectorOpen ? undefined : "flex-col"} />
             </div>
           </div>
         </div>
@@ -882,7 +886,7 @@ export function ErrorBoundary({ error }: { error: unknown }) {
         </h1>
         <p className="text-sm text-grey-7 dark:text-grey-6">{message}</p>
         <Link
-          to="/create"
+          to={localePath("/create")}
           className="mt-2 px-4 py-2 text-sm font-medium rounded-lg bg-primary-5 text-white hover:bg-primary-6 transition-colors"
         >
           {t("error.uploadNew")}

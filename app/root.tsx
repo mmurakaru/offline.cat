@@ -1,4 +1,3 @@
-import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import {
   isRouteErrorResponse,
@@ -8,11 +7,13 @@ import {
   Outlet,
   Scripts,
   ScrollRestoration,
+  useLocation,
 } from "react-router";
 
 import type { Route } from "./+types/root";
 import "./app.css";
-import "./lib/i18n";
+import i18n from "./lib/i18n";
+import { ALTERNATE_LOCALES, DEFAULT_LOCALE } from "./lib/locales";
 import "./lib/register-paint-worklets";
 import { ErrorIcon } from "./components/error-icon";
 
@@ -29,15 +30,18 @@ export const links: Route.LinksFunction = () => [
   },
 ];
 
-export function Layout({ children }: { children: React.ReactNode }) {
-  const { i18n } = useTranslation();
+function getLocaleFromPath(pathname: string) {
+  const firstSegment = pathname.split("/")[1];
+  return ALTERNATE_LOCALES.has(firstSegment) ? firstSegment : DEFAULT_LOCALE;
+}
 
-  useEffect(() => {
-    document.documentElement.lang = i18n.language;
-  }, [i18n.language]);
+export function Layout({ children }: { children: React.ReactNode }) {
+  const location = useLocation();
+  const lang = getLocaleFromPath(location.pathname);
+  i18n.language = lang;
 
   return (
-    <html lang={i18n.language}>
+    <html lang={lang}>
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -59,6 +63,11 @@ export default function App() {
 
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
   const { t } = useTranslation();
+  const location = useLocation();
+  const firstSegment = location.pathname.split("/")[1];
+  const langPrefix =
+    firstSegment && ALTERNATE_LOCALES.has(firstSegment) ? firstSegment : null;
+  const homePath = langPrefix ? `/${langPrefix}` : "/";
   let code = "Error";
   let message = t("error.unexpected");
   let stack: string | undefined;
@@ -88,7 +97,7 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
           </pre>
         )}
         <Link
-          to="/"
+          to={homePath}
           className="mt-4 px-4 py-2 text-sm font-medium rounded-lg bg-primary-5 text-white hover:bg-primary-6 transition-colors"
         >
           {t("error.backHome")}

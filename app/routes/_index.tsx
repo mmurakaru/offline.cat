@@ -5,6 +5,7 @@ import { CoffeeIcon } from "../components/coffee-icon";
 import { LocaleSwitcher } from "../components/LocaleSwitcher";
 import { OfflineIcon } from "../components/offline-icon";
 import i18n from "../lib/i18n";
+import { localePath } from "../lib/localePath";
 
 export function meta() {
   return [
@@ -41,7 +42,7 @@ export default function Home() {
 
         <div className="mt-8 flex items-center gap-3 flex-wrap justify-center">
           <RouterLink
-            to="/create"
+            to={localePath("/create")}
             className="whitespace-nowrap px-5 py-2.5 bg-grey-25 text-grey-1 rounded-lg hover:bg-grey-23 dark:bg-grey-1 dark:text-grey-25 dark:hover:bg-grey-3 transition-colors"
           >
             {t("home.cta.start")}

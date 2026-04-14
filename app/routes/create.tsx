@@ -8,6 +8,7 @@ import { OfflineIcon } from "../components/offline-icon";
 import { cn } from "../lib/cn";
 import { getDB } from "../lib/db";
 import i18n from "../lib/i18n";
+import { localePath } from "../lib/localePath";
 
 const ACCEPTED_TYPES = [".pptx", ".docx", ".html", ".htm", ".xliff", ".xlf"];
 
@@ -37,7 +38,7 @@ export default function Create() {
         [id, file.name, file.type, new Uint8Array(buffer), Date.now()],
       );
 
-      navigate(`/translate/${id}`);
+      navigate(localePath(`/translate/${id}`));
     },
     [navigate],
   );
@@ -66,7 +67,7 @@ export default function Create() {
 
   return (
     <main className="relative flex flex-col items-center justify-center min-h-screen gap-4 p-4">
-      <Link to="/" className="absolute top-4 left-4">
+      <Link to={localePath("/")} className="absolute top-4 left-4">
         <OfflineIcon className="w-9 bg-black dark:bg-white" />
       </Link>
       <div className="absolute top-4 right-4">
