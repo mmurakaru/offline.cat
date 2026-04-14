@@ -5,6 +5,7 @@ import {
   MenuTrigger,
   Popover,
 } from "react-aria-components";
+import { useTranslation } from "react-i18next";
 import { LayoutIcon } from "./layout-icon";
 import { NumberedListIcon } from "./numbered-list-icon";
 import { PreviewIcon } from "./preview-icon";
@@ -18,14 +19,14 @@ interface SidebarViewToggleProps {
   fileType: string;
 }
 
-function getPreviewLabel(fileType: string): string {
+function getPreviewLabelKey(fileType: string): string {
   switch (fileType) {
     case "pptx":
-      return "Slide Only";
+      return "sidebar.slideOnly";
     case "docx":
-      return "Page Only";
+      return "sidebar.pageOnly";
     default:
-      return "Preview Only";
+      return "sidebar.previewOnly";
   }
 }
 
@@ -34,13 +35,14 @@ export function SidebarViewToggle({
   onModeChange,
   fileType,
 }: SidebarViewToggleProps) {
+  const { t } = useTranslation();
   const hasThumbnails = fileType === "pptx";
-  const previewLabel = getPreviewLabel(fileType);
+  const previewLabel = t(getPreviewLabelKey(fileType));
 
   return (
     <MenuTrigger>
       <Button
-        aria-label="Sidebar view"
+        aria-label={t("sidebar.view")}
         className="p-2 rounded-lg hover:bg-black/5 active:bg-black/10 dark:hover:bg-white/10 dark:active:bg-white/15 cursor-pointer text-grey-7 dark:text-grey-6 transition-colors"
       >
         <SidebarIcon />
@@ -59,7 +61,7 @@ export function SidebarViewToggle({
                 {mode === "navigator" ? "✓" : ""}
               </span>
               <LayoutIcon />
-              Navigator
+              {t("sidebar.navigator")}
             </MenuItem>
           )}
           <MenuItem
@@ -70,7 +72,7 @@ export function SidebarViewToggle({
               {mode === "outline" ? "✓" : ""}
             </span>
             <NumberedListIcon />
-            Outline
+            {t("sidebar.outline")}
           </MenuItem>
           <MenuItem
             id="preview"

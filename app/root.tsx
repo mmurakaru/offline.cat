@@ -1,3 +1,5 @@
+import { useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import {
   isRouteErrorResponse,
   Link,
@@ -10,6 +12,7 @@ import {
 
 import type { Route } from "./+types/root";
 import "./app.css";
+import "./lib/i18n";
 import "./lib/register-paint-worklets";
 import { ErrorIcon } from "./components/error-icon";
 
@@ -27,8 +30,14 @@ export const links: Route.LinksFunction = () => [
 ];
 
 export function Layout({ children }: { children: React.ReactNode }) {
+  const { i18n } = useTranslation();
+
+  useEffect(() => {
+    document.documentElement.lang = i18n.language;
+  }, [i18n.language]);
+
   return (
-    <html lang="en">
+    <html lang={i18n.language}>
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -49,16 +58,15 @@ export default function App() {
 }
 
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
+  const { t } = useTranslation();
   let code = "Error";
-  let message = "An unexpected error occurred.";
+  let message = t("error.unexpected");
   let stack: string | undefined;
 
   if (isRouteErrorResponse(error)) {
     code = String(error.status);
     message =
-      error.status === 404
-        ? "The requested page could not be found."
-        : error.statusText || message;
+      error.status === 404 ? t("error.notFound") : error.statusText || message;
   } else if (error instanceof Error) {
     message = error.message;
     if (import.meta.env.DEV) {
@@ -83,7 +91,7 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
           to="/"
           className="mt-4 px-4 py-2 text-sm font-medium rounded-lg bg-primary-5 text-white hover:bg-primary-6 transition-colors"
         >
-          Back to home
+          {t("error.backHome")}
         </Link>
       </div>
     </main>

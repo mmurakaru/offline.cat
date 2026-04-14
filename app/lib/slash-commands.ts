@@ -1,3 +1,5 @@
+import i18n from "./i18n";
+
 export interface SlashCommand {
   id: string;
   label: string;
@@ -10,23 +12,23 @@ export function getSlashCommands(options?: {
   const commands: SlashCommand[] = [
     {
       id: "source",
-      label: "Source",
-      description: "Insert the source text",
+      label: i18n.t("slash.sourceLabel"),
+      description: i18n.t("slash.sourceDescription"),
     },
   ];
 
   if (options?.canTranslate !== false) {
     commands.push({
       id: "ai",
-      label: "AI Translate",
-      description: "Translate this segment with AI",
+      label: i18n.t("slash.aiLabel"),
+      description: i18n.t("slash.aiDescription"),
     });
   }
 
   commands.push({
     id: "voice",
-    label: "Voice",
-    description: "Dictate translation with your voice",
+    label: i18n.t("slash.voiceLabel"),
+    description: i18n.t("slash.voiceDescription"),
   });
 
   return commands;

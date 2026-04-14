@@ -1,0 +1,98 @@
+{
+  "home": {
+    "hero": {
+      "titleHighlight": "Traducció amb IA",
+      "titleRest": "que es queda al teu dispositiu"
+    },
+    "subtitle": "Traducció de documents amb privadesa, impulsada per IA al dispositiu. Funciona fora de línia i és completament gratuïta.",
+    "cta": {
+      "start": "Comença a traduir",
+      "coffee": "Compra'm un cafè"
+    },
+    "footer": {
+      "brand": "offline.cat",
+      "copyright": "© 2027 Tots els drets reservats"
+    }
+  },
+  "create": {
+    "dropzone": {
+      "label": "Deixa anar un fitxer o fes clic per explorar",
+      "formats": "PPTX, DOCX, HTML, XLIFF"
+    },
+    "offlinePrefix": "Per a l'ús fora de línia,",
+    "offlineLink": "descarrega els paquets d'idiomes necessaris",
+    "offlineSuffix": "primer.",
+    "unsupported": "Requereix Chrome 138+ amb la traducció al dispositiu activada.",
+    "devClear": "[DEV] Esborra la base de dades",
+    "devCleared": "Base de dades esborrada."
+  },
+  "editor": {
+    "noSegments": "No s'han trobat segments traduïbles.",
+    "translationComplete": "Traducció completada",
+    "clickToTranslate": "Fes clic per traduir...",
+    "newFile": "Fitxer nou",
+    "sourcePlaceholder": "Origen",
+    "targetPlaceholder": "Destinació",
+    "sourceLanguage": "Idioma d'origen",
+    "targetLanguage": "Idioma de destinació",
+    "translate": "Tradueix",
+    "download": "Descarrega el fitxer traduït",
+    "toggleInspector": "Commuta l'inspector",
+    "discardTitle": "Descarta les traduccions?",
+    "discardDescription": "El progrés de la traducció es perdrà. El botó de descàrrega a la capçalera et permet desar la feina primer.",
+    "discardConfirm": "Descarta i continua"
+  },
+  "inspector": {
+    "selectSegment": "Selecciona un segment",
+    "translationMemory": "Memòria de traducció",
+    "autoApplied": "Aplicat automàticament des de la MT",
+    "apply": "Aplica",
+    "confirmed": "Confirmat",
+    "aiTranslation": "Traducció amb IA"
+  },
+  "sidebar": {
+    "view": "Vista de la barra lateral",
+    "navigator": "Navegador",
+    "outline": "Esquema",
+    "slideOnly": "Només diapositiva",
+    "pageOnly": "Només pàgina",
+    "previewOnly": "Només previsualització"
+  },
+  "outline": {
+    "slide": "Diapositiva {{num}}",
+    "page": "Pàgina {{num}}"
+  },
+  "segmentList": {
+    "source": "Origen",
+    "translation": "Traducció"
+  },
+  "slash": {
+    "sourceLabel": "Origen",
+    "sourceDescription": "Insereix el text d'origen",
+    "aiLabel": "Traducció amb IA",
+    "aiDescription": "Tradueix aquest segment amb IA",
+    "voiceLabel": "Veu",
+    "voiceDescription": "Dicta la traducció amb la teva veu"
+  },
+  "dialog": {
+    "cancel": "Cancel·la"
+  },
+  "toast": {
+    "close": "Tanca"
+  },
+  "error": {
+    "unexpected": "S'ha produït un error inesperat.",
+    "notFound": "No s'ha pogut trobar la pàgina sol·licitada.",
+    "backHome": "Torna a l'inici",
+    "fileLoad": "No s'ha pogut carregar el fitxer",
+    "fileLoadMessage": "Alguna cosa ha fallat en carregar el fitxer.",
+    "uploadNew": "Puja un fitxer nou"
+  },
+  "meta": {
+    "homeTitle": "offline.cat",
+    "homeDescription": "Tradueix documents fora de línia. Sense servidors. Sense comptes. Sense excepcions.",
+    "createTitle": "Projecte nou - offline.cat",
+    "editorTitle": "Tradueix - offline.cat",
+    "editorDescription": "Tradueix documents fora de línia. Sense servidors. Sense comptes. Sense excepcions."
+  }
+}

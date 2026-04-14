@@ -1,0 +1,98 @@
+{
+  "home": {
+    "hero": {
+      "titleHighlight": "AI translation",
+      "titleRest": "that stays on your device"
+    },
+    "subtitle": "Privacy-first document translation powered by on-device AI. Works offline and completely free.",
+    "cta": {
+      "start": "Start translating",
+      "coffee": "Buy me a coffee"
+    },
+    "footer": {
+      "brand": "offline.cat",
+      "copyright": "© 2027 All rights reserved"
+    }
+  },
+  "create": {
+    "dropzone": {
+      "label": "Drop a file or click to browse",
+      "formats": "PPTX, DOCX, HTML, XLIFF"
+    },
+    "offlinePrefix": "For offline usage,",
+    "offlineLink": "download required language packs",
+    "offlineSuffix": "first.",
+    "unsupported": "Requires Chrome 138+ with on-device translation enabled.",
+    "devClear": "[DEV] Clear database",
+    "devCleared": "Database cleared."
+  },
+  "editor": {
+    "noSegments": "No translatable segments found.",
+    "translationComplete": "Translation complete",
+    "clickToTranslate": "Click to translate...",
+    "newFile": "New file",
+    "sourcePlaceholder": "Source",
+    "targetPlaceholder": "Target",
+    "sourceLanguage": "Source language",
+    "targetLanguage": "Target language",
+    "translate": "Translate",
+    "download": "Download translated file",
+    "toggleInspector": "Toggle inspector",
+    "discardTitle": "Discard translations?",
+    "discardDescription": "Your translation progress will be lost. The download button in the header lets you save your work first.",
+    "discardConfirm": "Discard & continue"
+  },
+  "inspector": {
+    "selectSegment": "Select a segment",
+    "translationMemory": "Translation Memory",
+    "autoApplied": "Auto-applied from TM",
+    "apply": "Apply",
+    "confirmed": "Confirmed",
+    "aiTranslation": "AI Translation"
+  },
+  "sidebar": {
+    "view": "Sidebar view",
+    "navigator": "Navigator",
+    "outline": "Outline",
+    "slideOnly": "Slide Only",
+    "pageOnly": "Page Only",
+    "previewOnly": "Preview Only"
+  },
+  "outline": {
+    "slide": "Slide {{num}}",
+    "page": "Page {{num}}"
+  },
+  "segmentList": {
+    "source": "Source",
+    "translation": "Translation"
+  },
+  "slash": {
+    "sourceLabel": "Source",
+    "sourceDescription": "Insert the source text",
+    "aiLabel": "AI Translate",
+    "aiDescription": "Translate this segment with AI",
+    "voiceLabel": "Voice",
+    "voiceDescription": "Dictate translation with your voice"
+  },
+  "dialog": {
+    "cancel": "Cancel"
+  },
+  "toast": {
+    "close": "Close"
+  },
+  "error": {
+    "unexpected": "An unexpected error occurred.",
+    "notFound": "The requested page could not be found.",
+    "backHome": "Back to home",
+    "fileLoad": "Failed to load file",
+    "fileLoadMessage": "Something went wrong while loading the file.",
+    "uploadNew": "Upload a new file"
+  },
+  "meta": {
+    "homeTitle": "offline.cat",
+    "homeDescription": "Translate documents offline. No servers. No accounts. No exceptions.",
+    "createTitle": "New project - offline.cat",
+    "editorTitle": "Translate - offline.cat",
+    "editorDescription": "Translate documents offline. No servers. No accounts. No exceptions."
+  }
+}

@@ -7,6 +7,7 @@ import {
   Modal,
   ModalOverlay,
 } from "react-aria-components";
+import { useTranslation } from "react-i18next";
 
 interface ConfirmDialogProps {
   title: string;
@@ -23,6 +24,8 @@ export function ConfirmDialog({
   onConfirm,
   children,
 }: ConfirmDialogProps) {
+  const { t } = useTranslation();
+
   return (
     <DialogTrigger>
       {children}
@@ -43,7 +46,7 @@ export function ConfirmDialog({
                 slot="close"
                 className="px-3 py-1.5 rounded-lg text-sm font-medium text-grey-7 dark:text-grey-6 hover:bg-black/5 dark:hover:bg-white/10 cursor-pointer outline-none focus:ring-2 focus:ring-primary-6 transition-colors"
               >
-                Cancel
+                {t("dialog.cancel")}
               </Button>
               <Button
                 onPress={onConfirm}

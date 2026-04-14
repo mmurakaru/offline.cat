@@ -1,4 +1,5 @@
 import { Button } from "react-aria-components";
+import { useTranslation } from "react-i18next";
 import type { Segment } from "../hooks/useTranslation";
 
 interface InspectorPanelProps {
@@ -7,10 +8,12 @@ interface InspectorPanelProps {
 }
 
 export function InspectorPanel({ segment, onConfirm }: InspectorPanelProps) {
+  const { t } = useTranslation();
+
   if (!segment) {
     return (
       <div className="h-full flex items-center justify-center p-4 text-xs text-grey-6">
-        Select a segment
+        {t("inspector.selectSegment")}
       </div>
     );
   }
@@ -33,7 +36,7 @@ export function InspectorPanel({ segment, onConfirm }: InspectorPanelProps) {
         <div>
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-medium text-grey-7">
-              Translation Memory
+              {t("inspector.translationMemory")}
             </span>
             <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">
               {Math.round(segment.translationMemoryScore!)}%
@@ -48,7 +51,7 @@ export function InspectorPanel({ segment, onConfirm }: InspectorPanelProps) {
             }
             className="w-full px-3 py-1.5 text-xs font-medium bg-primary-5 text-white rounded-md hover:bg-primary-6 cursor-pointer transition-colors"
           >
-            Apply
+            {t("inspector.apply")}
           </Button>
         </div>
       )}
@@ -58,13 +61,13 @@ export function InspectorPanel({ segment, onConfirm }: InspectorPanelProps) {
         <div>
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-medium text-grey-7">
-              Translation Memory
+              {t("inspector.translationMemory")}
             </span>
             <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">
               {Math.round(segment.translationMemoryScore!)}%
             </span>
           </div>
-          <p className="text-xs text-grey-6">Auto-applied from TM</p>
+          <p className="text-xs text-grey-6">{t("inspector.autoApplied")}</p>
         </div>
       )}
 
@@ -72,7 +75,7 @@ export function InspectorPanel({ segment, onConfirm }: InspectorPanelProps) {
       {isConfirmed && (
         <div>
           <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">
-            Confirmed
+            {t("inspector.confirmed")}
           </span>
         </div>
       )}
@@ -81,7 +84,7 @@ export function InspectorPanel({ segment, onConfirm }: InspectorPanelProps) {
       {isAi && (
         <div>
           <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-grey-3 text-grey-8 dark:bg-grey-15 dark:text-grey-6">
-            AI Translation
+            {t("inspector.aiTranslation")}
           </span>
         </div>
       )}

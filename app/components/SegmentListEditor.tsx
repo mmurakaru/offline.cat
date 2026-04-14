@@ -2,10 +2,12 @@ import Placeholder from "@tiptap/extension-placeholder";
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { useEffect, useMemo, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { SlashCommand } from "../extensions/slash-command";
 import { createSlashCommandSuggestion } from "../extensions/slash-command-renderer";
 import type { Segment } from "../hooks/useTranslation";
 import { cn } from "../lib/cn";
+import i18n from "../lib/i18n";
 import { startDictation } from "../lib/speech-recognition";
 
 interface SegmentEditorRowProps {
@@ -29,14 +31,26 @@ function SegmentEditorRow({
 }: SegmentEditorRowProps) {
   const editorInstanceRef = useRef<ReturnType<typeof useEditor>>(null);
 
-  const callbacksRef = useRef({ onContentChange, onTranslateSegment, source: segment.source, canTranslate });
-  callbacksRef.current = { onContentChange, onTranslateSegment, source: segment.source, canTranslate };
+  const callbacksRef = useRef({
+    onContentChange,
+    onTranslateSegment,
+    source: segment.source,
+    canTranslate,
+  });
+  callbacksRef.current = {
+    onContentChange,
+    onTranslateSegment,
+    source: segment.source,
+    canTranslate,
+  };
 
   const slashCommandSuggestion = useMemo(
     () =>
       createSlashCommandSuggestion({
         onInsertSource: () => {
-          editorInstanceRef.current?.commands.setContent(callbacksRef.current.source);
+          editorInstanceRef.current?.commands.setContent(
+            callbacksRef.current.source,
+          );
           callbacksRef.current.onContentChange(callbacksRef.current.source);
         },
         onTranslateSegment: () => {
@@ -67,7 +81,7 @@ function SegmentEditorRow({
         horizontalRule: false,
       }),
       Placeholder.configure({
-        placeholder: "Click to translate...",
+        placeholder: i18n.t("editor.clickToTranslate"),
       }),
       SlashCommand.configure({
         suggestion: slashCommandSuggestion,
@@ -149,12 +163,14 @@ export function SegmentListEditor({
   onTranslateSegment,
   canTranslate,
 }: SegmentListEditorProps) {
+  const { t } = useTranslation();
+
   return (
     <div className="max-w-4xl mx-auto py-4">
       <div className="border border-grey-3 rounded-lg dark:border-grey-14 bg-grey-1 dark:bg-ui-app-background">
         <div className="grid grid-cols-[1fr_1fr] gap-4 px-4 py-2 text-xs font-medium text-grey-7 uppercase border-b border-grey-3 dark:border-grey-14">
-          <span>Source</span>
-          <span>Translation</span>
+          <span>{t("segmentList.source")}</span>
+          <span>{t("segmentList.translation")}</span>
         </div>
         <div className="divide-y divide-grey-3 dark:divide-grey-14">
           {segments.map((segment) => (

@@ -6,6 +6,7 @@ import { SlashCommand } from "../extensions/slash-command";
 import { createSlashCommandSuggestion } from "../extensions/slash-command-renderer";
 import type { Segment } from "../hooks/useTranslation";
 import { cn } from "../lib/cn";
+import i18n from "../lib/i18n";
 import type { SlideLayout } from "../lib/parser-client";
 import type { DocxDocumentLayout } from "../lib/parsers/docx";
 import { startDictation } from "../lib/speech-recognition";
@@ -98,7 +99,7 @@ function SegmentRow({
         horizontalRule: false,
       }),
       Placeholder.configure({
-        placeholder: "Click to translate...",
+        placeholder: i18n.t("editor.clickToTranslate"),
       }),
       SlashCommand.configure({
         suggestion: slashCommandSuggestion,
@@ -187,7 +188,7 @@ function buildGroups(
       segments.map((segment) => [segment.id, segment]),
     );
     return layouts.map((layout) => ({
-      label: `Slide ${layout.slideIndex + 1}`,
+      label: i18n.t("outline.slide", { num: layout.slideIndex + 1 }),
       segments: layout.regions
         .map((region) => segmentMap.get(region.segmentId))
         .filter(Boolean) as Segment[],
@@ -207,7 +208,7 @@ function buildGroups(
       if (block.type === "pageBreak") {
         if (currentSegments.length > 0) {
           pages.push({
-            label: `Page ${pageIndex + 1}`,
+            label: i18n.t("outline.page", { num: pageIndex + 1 }),
             segments: currentSegments,
           });
           currentSegments = [];
@@ -220,7 +221,10 @@ function buildGroups(
     }
     // Remaining segments after last page break
     if (currentSegments.length > 0) {
-      pages.push({ label: `Page ${pageIndex + 1}`, segments: currentSegments });
+      pages.push({
+        label: i18n.t("outline.page", { num: pageIndex + 1 }),
+        segments: currentSegments,
+      });
     }
 
     // If only one page, don't show the label

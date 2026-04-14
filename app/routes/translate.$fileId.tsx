@@ -7,6 +7,7 @@ import {
   ListBoxItem,
   Popover,
 } from "react-aria-components";
+import { useTranslation as useI18n } from "react-i18next";
 import {
   isRouteErrorResponse,
   Link,
@@ -20,6 +21,7 @@ import { EditorCanvas } from "../components/EditorCanvas";
 import { ErrorIcon } from "../components/error-icon";
 import { InspectorPanel } from "../components/InspectorPanel";
 import { InspectorToggleIcon } from "../components/inspector-toggle-icon";
+import { LocaleSwitcher } from "../components/LocaleSwitcher";
 import { LoadingIcon } from "../components/loading-icon";
 import { NavigatorSidebar } from "../components/NavigatorSidebar";
 import { OutlineSidebar } from "../components/OutlineSidebar";
@@ -36,19 +38,17 @@ import { useFileParsing } from "../hooks/useFileParsing";
 import type { Segment } from "../hooks/useTranslation";
 import { useTranslation } from "../hooks/useTranslation";
 import { cn } from "../lib/cn";
+import i18n from "../lib/i18n";
 import { reconstructFile } from "../lib/parser-client";
-import {
-  addTranslationMemoryEntry,
-} from "../lib/translation-memory";
+import { addTranslationMemoryEntry } from "../lib/translation-memory";
 import { translateSegments } from "../lib/translator";
 
 export function meta() {
   return [
-    { title: "Translate - offline.cat" },
+    { title: i18n.t("meta.editorTitle") },
     {
       name: "description",
-      content:
-        "Translate documents offline. No servers. No accounts. No exceptions.",
+      content: i18n.t("meta.editorDescription"),
     },
   ];
 }
@@ -169,6 +169,7 @@ function LeftSidebarCollapsedNav({
   count: number;
   onClickIndex: (index: number) => void;
 }) {
+  const { t } = useI18n();
   if (count <= 0) return null;
 
   return (
@@ -185,7 +186,9 @@ function LeftSidebarCollapsedNav({
                 ? "bg-primary-5 text-white"
                 : "text-grey-6 hover:text-grey-8 dark:hover:text-grey-4 hover:bg-grey-3 dark:hover:bg-grey-15",
             )}
-            title={`${fileType === "pptx" ? "Slide" : "Page"} ${index + 1}`}
+            title={t(fileType === "pptx" ? "outline.slide" : "outline.page", {
+              num: index + 1,
+            })}
           >
             {index + 1}
           </button>
@@ -258,6 +261,7 @@ function getFileTypeBadge(filename: string): {
 }
 
 export default function Translate() {
+  const { t } = useI18n();
   const { fileId } = useParams();
   const navigate = useNavigate();
   const [targetLanguage, setTargetLanguage] = useState("");
@@ -302,8 +306,8 @@ export default function Translate() {
 
   const handleTranslate = useCallback(async () => {
     await translate(segments, sourceLanguage, targetLanguage);
-    queue.add({ title: "Translation complete" }, { timeout: 5000 });
-  }, [segments, sourceLanguage, targetLanguage, translate]);
+    queue.add({ title: t("editor.translationComplete") }, { timeout: 5000 });
+  }, [segments, sourceLanguage, targetLanguage, translate, t]);
 
   const handleTranslateSegment = useCallback(
     async (segmentId: string) => {
@@ -500,7 +504,11 @@ export default function Translate() {
               bold: r.fontStyle.bold,
               italic: r.fontStyle.italic,
               color: r.fontStyle.color,
-              align: r.fontStyle.align as "left" | "center" | "right" | undefined,
+              align: r.fontStyle.align as
+                | "left"
+                | "center"
+                | "right"
+                | undefined,
               lineHeight: r.fontStyle.lineHeight,
               lineSpacingPoints: r.fontStyle.lineSpacingPt,
             }
@@ -513,7 +521,11 @@ export default function Translate() {
         width: s.width,
         height: s.height,
         fill: s.fill
-          ? { type: "solid" as const, color: s.fill.color, opacity: s.fill.opacity }
+          ? {
+              type: "solid" as const,
+              color: s.fill.color,
+              opacity: s.fill.opacity,
+            }
           : undefined,
         image: s.image
           ? { mediaPath: s.image.mediaPath, contentType: s.image.contentType }
@@ -524,10 +536,17 @@ export default function Translate() {
       background: slide.background
         ? {
             fill: slide.background.fill
-              ? { type: "solid" as const, color: slide.background.fill.color, opacity: slide.background.fill.opacity }
+              ? {
+                  type: "solid" as const,
+                  color: slide.background.fill.color,
+                  opacity: slide.background.fill.opacity,
+                }
               : undefined,
             image: slide.background.image
-              ? { mediaPath: slide.background.image.mediaPath, contentType: slide.background.image.contentType }
+              ? {
+                  mediaPath: slide.background.image.mediaPath,
+                  contentType: slide.background.image.contentType,
+                }
               : undefined,
           }
         : undefined,
@@ -563,7 +582,11 @@ export default function Translate() {
           };
         }
         if (block.type === "image") {
-          return { type: "image" as const, mediaPath: block.mediaPath, contentType: block.contentType };
+          return {
+            type: "image" as const,
+            mediaPath: block.mediaPath,
+            contentType: block.contentType,
+          };
         }
         if (block.type === "table") return { type: "table" as const };
         return { type: "pageBreak" as const };
@@ -641,14 +664,14 @@ export default function Translate() {
               )}
               {stats.translated > 0 ? (
                 <ConfirmDialog
-                  title="Discard translations?"
-                  description="Your translation progress will be lost. The download button in the header lets you save your work first."
-                  confirmLabel="Discard & continue"
+                  title={t("editor.discardTitle")}
+                  description={t("editor.discardDescription")}
+                  confirmLabel={t("editor.discardConfirm")}
                   onConfirm={() => navigate("/create")}
                 >
                   <Button
                     className="p-2 rounded-lg hover:bg-black/5 active:bg-black/10 dark:hover:bg-white/10 dark:active:bg-white/15 cursor-pointer text-grey-7 dark:text-grey-6 transition-colors"
-                    aria-label="New file"
+                    aria-label={t("editor.newFile")}
                   >
                     <PlusIcon />
                   </Button>
@@ -657,7 +680,7 @@ export default function Translate() {
                 <Button
                   onPress={() => navigate("/create")}
                   className="p-2 rounded-lg hover:bg-black/5 active:bg-black/10 dark:hover:bg-white/10 dark:active:bg-white/15 cursor-pointer text-grey-7 dark:text-grey-6 transition-colors"
-                  aria-label="New file"
+                  aria-label={t("editor.newFile")}
                 >
                   <PlusIcon />
                 </Button>
@@ -681,7 +704,7 @@ export default function Translate() {
 
             <div className="flex items-center gap-3">
               <ComboBox
-                aria-label="Source language"
+                aria-label={t("editor.sourceLanguage")}
                 selectedKey={sourceLanguage}
                 isDisabled={unsupportedSource}
                 onSelectionChange={(key) => {
@@ -703,7 +726,7 @@ export default function Translate() {
                 defaultItems={getSourceLanguages()}
               >
                 <Input
-                  placeholder="Source"
+                  placeholder={t("editor.sourcePlaceholder")}
                   className="w-30 border border-grey-3 dark:border-ui-divider rounded-lg px-2.5 py-1 text-sm bg-grey-1 dark:bg-grey-23 hover:bg-grey-2 dark:hover:bg-grey-15 outline-none focus:ring-2 focus:ring-primary-6 text-grey-9 dark:text-grey-4"
                 />
                 <Popover className="bg-grey-1 dark:bg-grey-23 border border-grey-3 dark:border-ui-divider rounded-lg shadow-lg py-1 min-w-[160px]">
@@ -723,7 +746,7 @@ export default function Translate() {
                 <ArrowRightIcon />
               </span>
               <ComboBox
-                aria-label="Target language"
+                aria-label={t("editor.targetLanguage")}
                 selectedKey={targetLanguage}
                 onSelectionChange={(key) => {
                   if (key) setTargetLanguage(key as string);
@@ -733,7 +756,7 @@ export default function Translate() {
                 isDisabled={!sourceLanguage || unsupportedSource}
               >
                 <Input
-                  placeholder="Target"
+                  placeholder={t("editor.targetPlaceholder")}
                   className="w-30 border border-grey-3 dark:border-ui-divider rounded-lg px-2.5 py-1 text-sm bg-grey-1 dark:bg-grey-23 hover:bg-grey-2 dark:hover:bg-grey-15 outline-none focus:ring-2 focus:ring-primary-6 text-grey-9 dark:text-grey-4"
                 />
                 <Popover className="bg-grey-1 dark:bg-grey-23 border border-grey-3 dark:border-ui-divider rounded-lg shadow-lg py-1 min-w-[160px]">
@@ -754,7 +777,7 @@ export default function Translate() {
                 onPress={handleTranslate}
                 isDisabled={isTranslating || !sourceLanguage || !targetLanguage}
                 className="p-2 rounded-lg cursor-pointer transition-colors text-grey-7 dark:text-grey-6 hover:bg-black/5 active:bg-black/10 dark:hover:bg-white/10 dark:active:bg-white/15 disabled:opacity-40 disabled:cursor-not-allowed"
-                aria-label="Translate"
+                aria-label={t("editor.translate")}
               >
                 {isTranslating ? <LoadingIcon /> : <TranslateIcon />}
               </Button>
@@ -763,7 +786,7 @@ export default function Translate() {
                 onPress={handleDownload}
                 isDisabled={stats.translated === 0 || isDownloading}
                 className="p-2 rounded-lg hover:bg-black/5 active:bg-black/10 dark:hover:bg-white/10 dark:active:bg-white/15 cursor-pointer text-grey-7 dark:text-grey-6 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                aria-label="Download translated file"
+                aria-label={t("editor.download")}
               >
                 {isDownloading ? <LoadingIcon /> : <DownloadIcon />}
               </Button>
@@ -783,7 +806,7 @@ export default function Translate() {
           <div className="flex-1 overflow-auto bg-grey-3 dark:bg-grey-23">
             {segments.length === 0 ? (
               <div className="flex items-center justify-center h-full">
-                <p className="text-grey-6">No translatable segments found.</p>
+                <p className="text-grey-6">{t("editor.noSegments")}</p>
               </div>
             ) : editorModel ? (
               <EditorCanvas
@@ -814,7 +837,7 @@ export default function Translate() {
                 type="button"
                 onClick={() => setInspectorOpen((open) => !open)}
                 className="p-1 rounded-md hover:bg-black/5 active:bg-black/10 dark:hover:bg-white/10 dark:active:bg-white/15 cursor-pointer text-grey-7 dark:text-grey-6 transition-colors"
-                aria-label="Toggle inspector"
+                aria-label={t("editor.toggleInspector")}
               >
                 <InspectorToggleIcon />
               </button>
@@ -829,6 +852,9 @@ export default function Translate() {
             ) : (
               <InspectorCollapsedIcons segment={activeSegment} />
             )}
+            <div className="mt-auto flex flex-col items-center pb-2">
+              <LocaleSwitcher className="flex-col" />
+            </div>
           </div>
         </div>
       </div>
@@ -838,7 +864,8 @@ export default function Translate() {
 }
 
 export function ErrorBoundary({ error }: { error: unknown }) {
-  let message = "Something went wrong while loading the file.";
+  const { t } = useI18n();
+  let message = t("error.fileLoadMessage");
 
   if (isRouteErrorResponse(error)) {
     message = error.statusText || message;
@@ -851,14 +878,14 @@ export function ErrorBoundary({ error }: { error: unknown }) {
       <div className="flex flex-col items-center gap-4 max-w-md text-center">
         <ErrorIcon className="w-8 h-8 text-grey-6" />
         <h1 className="text-lg font-semibold text-grey-9 dark:text-grey-4">
-          Failed to load file
+          {t("error.fileLoad")}
         </h1>
         <p className="text-sm text-grey-7 dark:text-grey-6">{message}</p>
         <Link
           to="/create"
           className="mt-2 px-4 py-2 text-sm font-medium rounded-lg bg-primary-5 text-white hover:bg-primary-6 transition-colors"
         >
-          Upload a new file
+          {t("error.uploadNew")}
         </Link>
       </div>
     </div>

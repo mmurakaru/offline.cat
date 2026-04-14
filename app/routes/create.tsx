@@ -1,25 +1,28 @@
 import { useCallback, useState } from "react";
 import { Button, DropZone, FileTrigger } from "react-aria-components";
+import { useTranslation } from "react-i18next";
 import { Link, useNavigate } from "react-router";
 import { DocumentIcon } from "../components/document-icon";
+import { LocaleSwitcher } from "../components/LocaleSwitcher";
 import { OfflineIcon } from "../components/offline-icon";
 import { cn } from "../lib/cn";
 import { getDB } from "../lib/db";
+import i18n from "../lib/i18n";
 
 const ACCEPTED_TYPES = [".pptx", ".docx", ".html", ".htm", ".xliff", ".xlf"];
 
 export function meta() {
   return [
-    { title: "New project - offline.cat" },
+    { title: i18n.t("meta.createTitle") },
     {
       name: "description",
-      content:
-        "Translate documents offline. No servers. No accounts. No exceptions.",
+      content: i18n.t("meta.homeDescription"),
     },
   ];
 }
 
 export default function Create() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [isDragging, setIsDragging] = useState(false);
   const supported = typeof window !== "undefined" && "Translator" in globalThis;
@@ -66,13 +69,25 @@ export default function Create() {
       <Link to="/" className="absolute top-4 left-4">
         <OfflineIcon className="w-9 bg-black dark:bg-white" />
       </Link>
+      <div className="absolute top-4 right-4">
+        <LocaleSwitcher />
+      </div>
       <div className="w-full max-w-lg flex flex-col gap-2">
         <p className="text-grey-7 flex items-center gap-2">
           <DocumentIcon />
         </p>
 
-        <FileTrigger onSelect={supported ? onSelect : undefined} acceptedFileTypes={ACCEPTED_TYPES}>
-          <Button className={cn("w-full outline-none", supported ? "cursor-pointer" : "cursor-not-allowed")} isDisabled={!supported}>
+        <FileTrigger
+          onSelect={supported ? onSelect : undefined}
+          acceptedFileTypes={ACCEPTED_TYPES}
+        >
+          <Button
+            className={cn(
+              "w-full outline-none",
+              supported ? "cursor-pointer" : "cursor-not-allowed",
+            )}
+            isDisabled={!supported}
+          >
             <DropZone
               onDropEnter={supported ? () => setIsDragging(true) : undefined}
               onDropExit={supported ? () => setIsDragging(false) : undefined}
@@ -87,10 +102,10 @@ export default function Create() {
               )}
             >
               <p className="text-sm text-grey-6">
-                Drop a file or click to browse
+                {t("create.dropzone.label")}
               </p>
               <p className="text-xs text-grey-6 mt-2">
-                PPTX, DOCX, HTML, XLIFF
+                {t("create.dropzone.formats")}
               </p>
             </DropZone>
           </Button>
@@ -99,19 +114,17 @@ export default function Create() {
 
       {supported ? (
         <p className="text-xs text-grey-6">
-          For offline usage,{" "}
+          {t("create.offlinePrefix")}{" "}
           <a
             href="chrome://on-device-translation-internals/"
             className="underline hover:text-grey-8 dark:hover:text-grey-4"
           >
-            download required language packs
+            {t("create.offlineLink")}
           </a>{" "}
-          first.
+          {t("create.offlineSuffix")}
         </p>
       ) : (
-        <p className="text-xs text-red-400">
-          Requires Chrome 138+ with on-device translation enabled.
-        </p>
+        <p className="text-xs text-red-400">{t("create.unsupported")}</p>
       )}
 
       {import.meta.env.DEV && (
@@ -121,11 +134,11 @@ export default function Create() {
             const db = await getDB();
             await db.execute("DELETE FROM translation_memory");
             await db.execute("DELETE FROM files");
-            alert("Database cleared.");
+            alert(t("create.devCleared"));
           }}
           className="text-xs text-red-400 hover:text-red-600 underline cursor-pointer"
         >
-          [DEV] Clear database
+          {t("create.devClear")}
         </button>
       )}
     </main>
