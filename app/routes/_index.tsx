@@ -1,4 +1,6 @@
-import { Link } from "react-router";
+import { Link as RouterLink } from "react-router";
+import { Link } from "react-aria-components";
+import { CoffeeIcon } from "../components/coffee-icon";
 import { OfflineIcon } from "../components/offline-icon";
 
 export function meta() {
@@ -19,7 +21,7 @@ export default function Home() {
         <OfflineIcon className="w-9 bg-black dark:bg-white" />
       </div>
 
-      <div className="flex flex-col items-center pt-[22vh]">
+      <div className="flex flex-col items-center pt-[10vh]">
         <h1 className="text-5xl sm:text-6xl md:text-7xl font-bold text-center tracking-tight max-w-3xl">
           <span className="ai-highlight">AI translation</span> that stays on
           your device
@@ -30,12 +32,22 @@ export default function Home() {
           offline and completely free.
         </p>
 
-        <Link
-          to="/create"
-          className="mt-8 px-5 py-2.5 bg-grey-25 text-grey-1 rounded-lg hover:bg-grey-23 dark:bg-grey-1 dark:text-grey-25 dark:hover:bg-grey-3 transition-colors"
-        >
-          Start translating
-        </Link>
+        <div className="mt-8 flex items-center gap-3">
+          <RouterLink
+            to="/create"
+            className="px-5 py-2.5 bg-grey-25 text-grey-1 rounded-lg hover:bg-grey-23 dark:bg-grey-1 dark:text-grey-25 dark:hover:bg-grey-3 transition-colors"
+          >
+            Start translating
+          </RouterLink>
+          <Link
+            href="https://buy.stripe.com/cNi9AM8HN8si8De68C4Ni00"
+            target="_blank"
+            className="flex items-center gap-1.5 px-5 py-2.5 bg-primary-5 text-white rounded-lg hover:bg-primary-6 transition-colors"
+          >
+            <CoffeeIcon />
+            Buy me a coffee
+          </Link>
+        </div>
       </div>
 
       <div className="mt-16 w-full max-w-4xl">
