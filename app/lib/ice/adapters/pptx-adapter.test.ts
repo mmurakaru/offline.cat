@@ -58,13 +58,18 @@ const presentationXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
   <p:sldSz cx="9144000" cy="6858000"/>
 </p:presentation>`;
 
-function makePptx(slides: string[], extras?: Record<string, Uint8Array>): Uint8Array {
+function makePptx(
+  slides: string[],
+  extras?: Record<string, Uint8Array>,
+): Uint8Array {
   const files: Record<string, Uint8Array> = {
     "ppt/presentation.xml": new TextEncoder().encode(presentationXml),
     ...extras,
   };
   for (let index = 0; index < slides.length; index++) {
-    files[`ppt/slides/slide${index + 1}.xml`] = new TextEncoder().encode(slides[index]);
+    files[`ppt/slides/slide${index + 1}.xml`] = new TextEncoder().encode(
+      slides[index],
+    );
   }
   return zipSync(files);
 }
@@ -140,7 +145,9 @@ describe("pptxParser", () => {
         expect(regionWithFont.fontStyle).not.toHaveProperty("sizePoints");
         // lineSpacingPt (not lineSpacingPoints) if present
         if ("lineSpacingPt" in regionWithFont.fontStyle) {
-          expect(regionWithFont.fontStyle).not.toHaveProperty("lineSpacingPoints");
+          expect(regionWithFont.fontStyle).not.toHaveProperty(
+            "lineSpacingPoints",
+          );
         }
       }
     });

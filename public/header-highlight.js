@@ -6,7 +6,12 @@ registerPaint(
     }
 
     static get inputProperties() {
-      return ["--highlight-color", "--highlight-opacity", "--highlight-height", "--highlight-offset"];
+      return [
+        "--highlight-color",
+        "--highlight-opacity",
+        "--highlight-height",
+        "--highlight-offset",
+      ];
     }
 
     seed(s) {
@@ -18,8 +23,7 @@ registerPaint(
 
     paint(ctx, size, properties) {
       const color =
-        properties.get("--highlight-color").toString().trim() ||
-        "#575bc7";
+        properties.get("--highlight-color").toString().trim() || "#575bc7";
       const opacity =
         parseFloat(properties.get("--highlight-opacity").toString()) || 0.2;
       const heightRatio =
@@ -67,10 +71,7 @@ registerPaint(
       );
 
       // Right edge down
-      ctx.lineTo(
-        w + radius * 0.05,
-        bottomY - radius + wobble * (rand() - 0.5),
-      );
+      ctx.lineTo(w + radius * 0.05, bottomY - radius + wobble * (rand() - 0.5));
 
       // Bottom-right rounded corner
       ctx.quadraticCurveTo(

@@ -2,7 +2,10 @@ import { zipSync } from "fflate";
 import { describe, expect, it } from "vitest";
 import { docxParser } from "./docx-adapter";
 
-function makeDocx(documentXml: string, extras?: Record<string, Uint8Array>): Uint8Array {
+function makeDocx(
+  documentXml: string,
+  extras?: Record<string, Uint8Array>,
+): Uint8Array {
   const files: Record<string, Uint8Array> = {
     "word/document.xml": new TextEncoder().encode(documentXml),
     ...extras,
@@ -63,8 +66,14 @@ describe("docxParser", () => {
     it("extracts segments from paragraphs", () => {
       const result = docxParser.parse(makeDocx(simpleDocumentXml));
       expect(result.segments).toHaveLength(2);
-      expect(result.segments[0]).toEqual({ id: "docx-p0", source: "Hello world" });
-      expect(result.segments[1]).toEqual({ id: "docx-p1", source: "Second paragraph" });
+      expect(result.segments[0]).toEqual({
+        id: "docx-p0",
+        source: "Hello world",
+      });
+      expect(result.segments[1]).toEqual({
+        id: "docx-p1",
+        source: "Second paragraph",
+      });
     });
 
     it("returns ParsedSegment shape (no xmlPath)", () => {

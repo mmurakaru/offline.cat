@@ -72,8 +72,14 @@ function makeSlide(title: string, body: string, bgColor = "FFFFFF") {
 
 const slides = [
   makeSlide("Acme Series A", "The operating system for global supply chains"),
-  makeSlide("The Problem", "Cross-border logistics costs companies $2.1T annually in delays and errors"),
-  makeSlide("Our Solution", "One platform to track, translate, and clear shipments in 190 countries"),
+  makeSlide(
+    "The Problem",
+    "Cross-border logistics costs companies $2.1T annually in delays and errors",
+  ),
+  makeSlide(
+    "Our Solution",
+    "One platform to track, translate, and clear shipments in 190 countries",
+  ),
 ];
 
 const presentationXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>

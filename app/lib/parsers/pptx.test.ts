@@ -3,8 +3,8 @@ import { describe, expect, it } from "vitest";
 import {
   extractFontStyle,
   extractImageRef,
-  extractLineColor,
   extractLayoutPlaceholderPositions,
+  extractLineColor,
   extractPptxLayout,
   extractSlideBackground,
   extractSlideLayout,
@@ -255,7 +255,9 @@ describe("parseThemeColors", () => {
 
 describe("extractSolidFill", () => {
   it("extracts hex color from a:srgbClr", () => {
-    const nodes = parseXml(`<a:solidFill><a:srgbClr val="FF5733"/></a:solidFill>`);
+    const nodes = parseXml(
+      `<a:solidFill><a:srgbClr val="FF5733"/></a:solidFill>`,
+    );
 
     const fill = extractSolidFill(nodes);
 
@@ -269,13 +271,17 @@ describe("extractSolidFill", () => {
   });
 
   it("returns undefined for scheme colors without theme map", () => {
-    const nodes = parseXml(`<a:solidFill><a:schemeClr val="accent1"/></a:solidFill>`);
+    const nodes = parseXml(
+      `<a:solidFill><a:schemeClr val="accent1"/></a:solidFill>`,
+    );
 
     expect(extractSolidFill(nodes)).toBeUndefined();
   });
 
   it("resolves scheme colors when theme colors are provided", () => {
-    const nodes = parseXml(`<a:solidFill><a:schemeClr val="dk2"/></a:solidFill>`);
+    const nodes = parseXml(
+      `<a:solidFill><a:schemeClr val="dk2"/></a:solidFill>`,
+    );
     const themeColors = new Map([["dk2", "#1F497D"]]);
 
     const fill = extractSolidFill(nodes, themeColors);
@@ -314,7 +320,9 @@ describe("extractImageRef", () => {
   });
 
   it("returns undefined when no blipFill present", () => {
-    const nodes = parseXml(`<a:solidFill><a:srgbClr val="000000"/></a:solidFill>`);
+    const nodes = parseXml(
+      `<a:solidFill><a:srgbClr val="000000"/></a:solidFill>`,
+    );
 
     expect(extractImageRef(nodes, new Map())).toBeUndefined();
   });
@@ -519,9 +527,7 @@ describe("extractSlideLayout", () => {
     const segments = extractTextFromSlideXml(layoutSlideXml, 0);
     const { regions } = extractSlideLayout(layoutSlideXml, 0);
 
-    expect(regions.map((r) => r.segmentId)).toEqual(
-      segments.map((s) => s.id),
-    );
+    expect(regions.map((r) => r.segmentId)).toEqual(segments.map((s) => s.id));
   });
 
   it("assigns zIndex from shape iteration order", () => {
@@ -678,7 +684,7 @@ describe("extractLineColor", () => {
       </root>
     `);
     // extractLineColor receives the children of the root element
-    const children = nodes[0]["root"];
+    const children = nodes[0].root;
     const themeColors = new Map([["accent1", "#4F81BD"]]);
 
     const fill = extractLineColor(children, themeColors);
@@ -700,7 +706,7 @@ describe("extractLineColor", () => {
         </p:style>
       </root>
     `);
-    const children = nodes[0]["root"];
+    const children = nodes[0].root;
     const themeColors = new Map([["accent1", "#4F81BD"]]);
 
     const fill = extractLineColor(children, themeColors);
@@ -1392,7 +1398,8 @@ describe("extractSlideLayout - layout font style fallback", () => {
       </p:cSld>
     </p:sld>`;
 
-    const layoutPositions = extractLayoutPlaceholderPositions(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+    const layoutPositions =
+      extractLayoutPlaceholderPositions(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
     <p:sldLayout xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
                  xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
       <p:cSld>
@@ -1423,7 +1430,14 @@ describe("extractSlideLayout - layout font style fallback", () => {
       </p:cSld>
     </p:sldLayout>`);
 
-    const { regions } = extractSlideLayout(slideXml, 0, undefined, undefined, undefined, layoutPositions);
+    const { regions } = extractSlideLayout(
+      slideXml,
+      0,
+      undefined,
+      undefined,
+      undefined,
+      layoutPositions,
+    );
 
     expect(regions).toHaveLength(1);
     // Shape has no align/size, should fall back to layout's center/44pt

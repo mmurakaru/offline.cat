@@ -1,9 +1,9 @@
 // Thin async wrapper around parser.worker.ts.
 // Keeps the main thread free during file parsing and reconstruction.
 
+import type { ParserRequest } from "../workers/parser.worker";
 import type { EditorModel } from "./ice/editor-model";
 import type { ParsedSegment } from "./ice/parser-interface";
-import type { ParserRequest } from "../workers/parser.worker";
 
 let worker: Worker | null = null;
 
@@ -65,7 +65,7 @@ export async function parseFile(
       image.bytes instanceof ArrayBuffer
         ? new Uint8Array(image.bytes)
         : image.bytes;
-    const blob = new Blob([bytes], { type: image.contentType });
+    const blob = new Blob([bytes as BlobPart], { type: image.contentType });
     imageUrls.set(image.mediaPath, URL.createObjectURL(blob));
   }
 
@@ -110,10 +110,10 @@ export function revokeImageUrls(imageUrls: Map<string, string>): void {
 // They will be removed when those components are updated to use editor-model types.
 
 export type {
+  DocxBlock,
   DocxDocumentLayout,
   DocxPageDimensions,
   DocxParagraphLayout,
-  DocxBlock,
 } from "./parsers/docx";
 
 export type {
@@ -141,4 +141,3 @@ export interface SlideLayout {
   background?: import("./parsers/pptx").SlideBackground;
   defaultTextColor?: string;
 }
-

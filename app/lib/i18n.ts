@@ -5,10 +5,14 @@ import en from "../locales/en.json";
 import { ALTERNATE_LOCALES, DEFAULT_LOCALE } from "./locales";
 
 function getInitialLocale(): string {
-  if (typeof window !== "undefined") {
-    const firstSegment = window.location.pathname.split("/")[1];
-    if (ALTERNATE_LOCALES.has(firstSegment)) return firstSegment;
-  }
+  if (typeof window === "undefined") return DEFAULT_LOCALE;
+
+  const stored = window.localStorage?.getItem("lang");
+  if (stored && ALTERNATE_LOCALES.has(stored)) return stored;
+
+  const firstSegment = window.location.pathname.split("/")[1];
+  if (ALTERNATE_LOCALES.has(firstSegment)) return firstSegment;
+
   return DEFAULT_LOCALE;
 }
 

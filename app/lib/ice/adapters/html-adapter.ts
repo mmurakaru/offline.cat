@@ -1,8 +1,5 @@
+import { extractSegments, reconstructHtml } from "../../parsers/html";
 import type { FormatParser, ParseResult } from "../parser-interface";
-import {
-  extractSegments,
-  reconstructHtml,
-} from "../../parsers/html";
 
 export const htmlParser: FormatParser = {
   extensions: ["html", "htm"],

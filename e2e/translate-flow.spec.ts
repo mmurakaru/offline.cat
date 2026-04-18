@@ -1,6 +1,6 @@
-import { expect, test } from "@playwright/test";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { expect, test } from "@playwright/test";
 
 const fixtures = path.join(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -13,8 +13,7 @@ const MOCK_TRANSLATIONS: Record<string, Record<string, string>> = {
   es: {
     "Welcome to our product": "Bienvenido a nuestro producto",
     "Getting started is easy": "Empezar es facil",
-    "Contact us for more information":
-      "Contactenos para mas informacion",
+    "Contact us for more information": "Contactenos para mas informacion",
     "Welcome to our website": "Bienvenido a nuestro sitio web",
     "Sample Document": "Documento de ejemplo",
     "This is an introductory paragraph about our services.":
@@ -109,9 +108,7 @@ test.describe("Translation flow", () => {
     await expect(
       page.getByText("Bienvenido a nuestro producto").first(),
     ).toBeVisible({ timeout: 5000 });
-    await expect(
-      page.getByText("Empezar es facil").first(),
-    ).toBeVisible();
+    await expect(page.getByText("Empezar es facil").first()).toBeVisible();
   });
 
   test("HTML: select languages, translate, verify results", async ({
@@ -148,9 +145,7 @@ test.describe("Translation flow", () => {
     ).toBeVisible({ timeout: 5000 });
   });
 
-  test("PPTX: select languages, translate, switch slides", async ({
-    page,
-  }) => {
+  test("PPTX: select languages, translate, switch slides", async ({ page }) => {
     await setupAndUpload(page, "sample.pptx");
 
     await expect(

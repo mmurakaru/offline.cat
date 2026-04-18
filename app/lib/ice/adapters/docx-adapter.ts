@@ -1,15 +1,12 @@
 import { unzipSync } from "fflate";
-import type { FormatParser, ParseResult } from "../parser-interface";
-import type {
-  DocumentBlock,
-  PageDimensions,
-} from "../editor-model";
 import {
   extractDocxImages,
   extractDocxLayoutFromFiles,
   extractSegmentsFromFiles,
   reconstructDocx,
 } from "../../parsers/docx";
+import type { DocumentBlock, PageDimensions } from "../editor-model";
+import type { FormatParser, ParseResult } from "../parser-interface";
 
 function mapPageDimensions(
   raw: import("../../parsers/docx").DocxPageDimensions,

@@ -1,12 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import type { EditorModel } from "../lib/ice/editor-model";
-import {
-  parseFile,
-  revokeImageUrls,
-} from "../lib/parser-client";
 import type { FileRecord } from "../lib/db";
 import { getDB } from "../lib/db";
+import type { EditorModel } from "../lib/ice/editor-model";
 import { detectLanguage } from "../lib/language-detector";
+import { parseFile, revokeImageUrls } from "../lib/parser-client";
 import { findTranslationMemoryMatch } from "../lib/translation-memory";
 import type { Segment } from "./useTranslation";
 
@@ -15,7 +12,9 @@ interface UseFileParsingOptions {
   sourceLanguage: string;
   targetLanguage: string;
   onNavigateAway: () => void;
-  setSegments: (segments: Segment[] | ((previous: Segment[]) => Segment[])) => void;
+  setSegments: (
+    segments: Segment[] | ((previous: Segment[]) => Segment[]),
+  ) => void;
 }
 
 interface UseFileParsingResult {
@@ -72,18 +71,24 @@ export function useFileParsing({
       setEditorModel(result.editorModel);
       setImageUrls(result.imageUrls);
 
-      // Auto-detect source language from first segments
+      // Auto-detect source language from first segments. When the
+      // LanguageDetector API isn't available (e.g. Tauri webview, Firefox),
+      // leave the language unset and let the user pick manually - don't flag
+      // it as unsupported.
       if (!sourceLanguage && result.segments.length > 0) {
-        const sampleText = result.segments
-          .slice(0, 10)
-          .map((segment) => segment.source)
-          .join(" ");
-        const detected = await detectLanguage(sampleText);
-        if (detected) {
-          setSourceLanguage(detected);
-          setUnsupportedSource(false);
-        } else {
-          setUnsupportedSource(true);
+        const detectorAvailable = "LanguageDetector" in globalThis;
+        if (detectorAvailable) {
+          const sampleText = result.segments
+            .slice(0, 10)
+            .map((segment) => segment.source)
+            .join(" ");
+          const detected = await detectLanguage(sampleText);
+          if (detected) {
+            setSourceLanguage(detected);
+            setUnsupportedSource(false);
+          } else {
+            setUnsupportedSource(true);
+          }
         }
       }
 

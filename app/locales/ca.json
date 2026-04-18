@@ -7,7 +7,27 @@
     "subtitle": "Traducció de documents amb privadesa, impulsada per IA al dispositiu. Funciona fora de línia i és completament gratuïta.",
     "cta": {
       "start": "Comença a traduir",
+      "tryInBrowser": "Prova-ho al navegador",
+      "otherPlatforms": "Altres plataformes i versions anteriors",
       "coffee": "Compra'm un cafè"
+    },
+    "support": {
+      "title": "T'agrada offline.cat?",
+      "description": "El nucli sempre serà gratuït. Si t'ha ajudat en el teu flux de traducció o t'ha estalviat temps, pensa a finançar la pròxima funcionalitat amb un cafè.",
+      "cta": "Compra'm un cafè"
+    },
+    "openSource": {
+      "eyebrow": "Codi obert",
+      "title": "Fet a la vista de tothom",
+      "description": "offline.cat és programari lliure. Les contribucions són benvingudes.",
+      "github": {
+        "title": "Veure a GitHub",
+        "description": "Explora el codi i segueix el repositori per rebre notificacions de les noves versions."
+      },
+      "releases": {
+        "title": "Totes les versions",
+        "description": "Descàrregues per a totes les plataformes, incloent-hi Windows, Linux i versions anteriors."
+      }
     },
     "footer": {
       "brand": "offline.cat",
@@ -22,9 +42,10 @@
     "offlinePrefix": "Per a l'ús fora de línia,",
     "offlineLink": "descarrega els paquets d'idiomes necessaris",
     "offlineSuffix": "primer.",
+    "manageModels": "Gestiona els models locals",
     "unsupported": "Requereix Chrome 138+ amb la traducció al dispositiu activada.",
-    "devClear": "[DEV] Esborra la base de dades",
-    "devCleared": "Base de dades esborrada."
+    "devClear": "Esborra les dades",
+    "devCleared": "Dades esborrades."
   },
   "editor": {
     "noSegments": "No s'han trobat segments traduïbles.",
@@ -38,6 +59,7 @@
     "translate": "Tradueix",
     "download": "Descarrega el fitxer traduït",
     "toggleInspector": "Commuta l'inspector",
+    "openSettings": "Gestiona els models locals",
     "discardTitle": "Descarta les traduccions?",
     "discardDescription": "El progrés de la traducció es perdrà. El botó de descàrrega a la capçalera et permet desar la feina primer.",
     "discardConfirm": "Descarta i continua"
@@ -93,6 +115,40 @@
     "homeDescription": "Tradueix documents fora de línia. Sense servidors. Sense comptes. Sense excepcions.",
     "createTitle": "Projecte nou - offline.cat",
     "editorTitle": "Tradueix - offline.cat",
-    "editorDescription": "Tradueix documents fora de línia. Sense servidors. Sense comptes. Sense excepcions."
+    "editorDescription": "Tradueix documents fora de línia. Sense servidors. Sense comptes. Sense excepcions.",
+    "settingsTitle": "Configuració - offline.cat"
+  },
+  "modelPicker": {
+    "placeholder": "Tria un model",
+    "active": "Actiu",
+    "notInstalled": "Descarrega",
+    "downloading": "Descarregant",
+    "verifying": "Verificant",
+    "failed": "Ha fallat",
+    "cancel": "Cancel·la la descàrrega",
+    "moreModels": "Més models"
+  },
+  "settings": {
+    "title": "Models locals",
+    "subtitle": "Tria un model per traduir. Els models s'executen completament al teu dispositiu.",
+    "loading": "Carregant el catàleg de models...",
+    "active": "Actiu",
+    "download": "Descarrega",
+    "setActive": "Utilitza aquest model",
+    "remove": "Elimina",
+    "verifying": "Verificant la suma de verificació...",
+    "downloadFailed": "La descàrrega ha fallat.",
+    "searchPlaceholder": "Cerca models per nom, laboratori o repositori...",
+    "clearSearch": "Neteja la cerca",
+    "close": "Tanca",
+    "filterBy": "Filtra per origen",
+    "filterAll": "Tots",
+    "empty": "Cap model coincideix amb el teu filtre.",
+    "clearFilters": "Neteja els filtres",
+    "desktopOnly": {
+      "title": "Només a l'aplicació d'escriptori",
+      "description": "El selector de models locals només està disponible a la versió d'escriptori d'offline.cat. La versió web utilitza l'API Translator de Chrome al dispositiu.",
+      "back": "Torna a l'inici"
+    }
   }
 }

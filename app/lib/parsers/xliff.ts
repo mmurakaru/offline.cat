@@ -53,9 +53,9 @@ export function extractSegments(xliff: string): ExtractedSegment[] {
 
         for (const child of children) {
           if ("source" in child) {
-            source = getTextContent(child["source"]);
+            source = getTextContent(child.source);
           } else if ("target" in child) {
-            const text = getTextContent(child["target"]);
+            const text = getTextContent(child.target);
             target = text || undefined;
           }
         }
@@ -98,14 +98,14 @@ export function reconstructXliff(
 
         for (const child of children) {
           if ("target" in child) {
-            child["target"] = [{ "#text": translation }];
+            child.target = [{ "#text": translation }];
             hasTarget = true;
             break;
           }
         }
 
         if (!hasTarget) {
-          children.push({ "target": [{ "#text": translation }] });
+          children.push({ target: [{ "#text": translation }] });
         }
       } else {
         for (const key of Object.keys(node)) {

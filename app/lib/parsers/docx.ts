@@ -495,9 +495,7 @@ export interface DocxImageData {
   contentType: string;
 }
 
-export function extractDocxLayoutFromFiles(
-  files: Record<string, Uint8Array>,
-): {
+export function extractDocxLayoutFromFiles(files: Record<string, Uint8Array>): {
   layout: DocxDocumentLayout;
   mediaPaths: string[];
 } {

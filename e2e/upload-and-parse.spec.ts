@@ -1,11 +1,17 @@
-import { expect, test } from "@playwright/test";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { expect, test } from "@playwright/test";
 
-const fixtures = path.join(path.dirname(fileURLToPath(import.meta.url)), "fixtures");
+const fixtures = path.join(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "fixtures",
+);
 
 // Helper to upload a file and wait for the translate page
-async function uploadFile(page: import("@playwright/test").Page, filename: string) {
+async function uploadFile(
+  page: import("@playwright/test").Page,
+  filename: string,
+) {
   await page.goto("/create");
   await page.waitForLoadState("networkidle");
   const fileInput = page.locator('input[type="file"]');
@@ -29,9 +35,11 @@ test.describe("Upload and parse", () => {
     await uploadFile(page, "sample.docx");
 
     // Text appears in both sidebar and canvas - use first()
-    await expect(page.getByText("Welcome to our document").first()).toBeVisible({
-      timeout: 10000,
-    });
+    await expect(page.getByText("Welcome to our document").first()).toBeVisible(
+      {
+        timeout: 10000,
+      },
+    );
   });
 
   test("PPTX: uploads and shows slide canvas", async ({ page }) => {

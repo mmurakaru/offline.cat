@@ -1,4 +1,4 @@
-import { type RouteConfig, layout, prefix } from "@react-router/dev/routes";
+import { layout, prefix, type RouteConfig } from "@react-router/dev/routes";
 import { flatRoutes } from "@react-router/fs-routes";
 import { DEFAULT_LOCALE, LOCALES } from "./lib/locales";
 

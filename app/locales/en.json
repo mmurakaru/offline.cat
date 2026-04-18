@@ -7,7 +7,27 @@
     "subtitle": "Privacy-first document translation powered by on-device AI. Works offline and completely free.",
     "cta": {
       "start": "Start translating",
+      "tryInBrowser": "Try in browser",
+      "otherPlatforms": "Other platforms and older releases",
       "coffee": "Buy me a coffee"
+    },
+    "support": {
+      "title": "Enjoying offline.cat?",
+      "description": "The core will always be free. If it helped your translation workflow or saved you time, consider fuelling the next feature with a coffee.",
+      "cta": "Buy me a coffee"
+    },
+    "openSource": {
+      "eyebrow": "Open source",
+      "title": "Built in the open",
+      "description": "offline.cat is free software. Contributions are welcome.",
+      "github": {
+        "title": "View on GitHub",
+        "description": "Explore the source and watch the repo to get notified about new releases."
+      },
+      "releases": {
+        "title": "All releases",
+        "description": "Downloads for every platform, including Windows, Linux, and older versions."
+      }
     },
     "footer": {
       "brand": "offline.cat",
@@ -22,9 +42,10 @@
     "offlinePrefix": "For offline usage,",
     "offlineLink": "download required language packs",
     "offlineSuffix": "first.",
+    "manageModels": "Manage local models",
     "unsupported": "Requires Chrome 138+ with on-device translation enabled.",
-    "devClear": "[DEV] Clear database",
-    "devCleared": "Database cleared."
+    "devClear": "Clear data",
+    "devCleared": "Data cleared."
   },
   "editor": {
     "noSegments": "No translatable segments found.",
@@ -38,6 +59,7 @@
     "translate": "Translate",
     "download": "Download translated file",
     "toggleInspector": "Toggle inspector",
+    "openSettings": "Manage local models",
     "discardTitle": "Discard translations?",
     "discardDescription": "Your translation progress will be lost. The download button in the header lets you save your work first.",
     "discardConfirm": "Discard & continue"
@@ -93,6 +115,40 @@
     "homeDescription": "Translate documents offline. No servers. No accounts. No exceptions.",
     "createTitle": "New project - offline.cat",
     "editorTitle": "Translate - offline.cat",
-    "editorDescription": "Translate documents offline. No servers. No accounts. No exceptions."
+    "editorDescription": "Translate documents offline. No servers. No accounts. No exceptions.",
+    "settingsTitle": "Settings - offline.cat"
+  },
+  "modelPicker": {
+    "placeholder": "Select a model",
+    "active": "Active",
+    "notInstalled": "Download",
+    "downloading": "Downloading",
+    "verifying": "Verifying",
+    "failed": "Failed",
+    "cancel": "Cancel download",
+    "moreModels": "More models"
+  },
+  "settings": {
+    "title": "Local models",
+    "subtitle": "Pick a model to translate with. Models run entirely on your device.",
+    "loading": "Loading model catalog...",
+    "active": "Active",
+    "download": "Download",
+    "setActive": "Use this model",
+    "remove": "Remove",
+    "verifying": "Verifying checksum...",
+    "downloadFailed": "Download failed.",
+    "searchPlaceholder": "Search models by name, lab, or repo...",
+    "clearSearch": "Clear search",
+    "close": "Close",
+    "filterBy": "Filter by origin",
+    "filterAll": "All",
+    "empty": "No models match your filter.",
+    "clearFilters": "Clear filters",
+    "desktopOnly": {
+      "title": "Desktop app only",
+      "description": "The local model picker is only available in the offline.cat desktop build. The web version uses Chrome's on-device Translator API instead.",
+      "back": "Back to home"
+    }
   }
 }

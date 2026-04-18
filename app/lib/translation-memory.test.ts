@@ -131,7 +131,7 @@ describe("findTranslationMemoryMatch", () => {
 
   beforeEach(() => {
     mockClient = makeMockClient();
-    vi.mocked(dbModule.getDB).mockResolvedValue(mockClient);
+    vi.mocked(dbModule.getDB).mockResolvedValue(mockClient as SqliteClient);
   });
 
   it("queries by source and target locale", async () => {
@@ -235,7 +235,12 @@ describe("findTranslationMemoryMatch", () => {
         id: "1",
         source_text: "completely different sentence here",
         source_normalized: "completely different sentence here",
-        source_tokens: JSON.stringify(["completely", "different", "sentence", "here"]),
+        source_tokens: JSON.stringify([
+          "completely",
+          "different",
+          "sentence",
+          "here",
+        ]),
         target_text: "should not match",
         source_locale: "en",
         target_locale: "es",
@@ -248,7 +253,11 @@ describe("findTranslationMemoryMatch", () => {
     ]);
 
     // Act
-    const result = await findTranslationMemoryMatch("Hello world today", "en", "es");
+    const result = await findTranslationMemoryMatch(
+      "Hello world today",
+      "en",
+      "es",
+    );
 
     // Assert
     expect(result.score).toBe(0);
@@ -261,7 +270,7 @@ describe("addTranslationMemoryEntry", () => {
 
   beforeEach(() => {
     mockClient = makeMockClient();
-    vi.mocked(dbModule.getDB).mockResolvedValue(mockClient);
+    vi.mocked(dbModule.getDB).mockResolvedValue(mockClient as SqliteClient);
   });
 
   it("inserts with correct SQL and parameters", async () => {

@@ -3,10 +3,10 @@
 //
 // Not part of the regular test suite - run manually when you need a fresh video.
 
-import { test } from "@playwright/test";
 import { execSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { test } from "@playwright/test";
 
 const fixtures = path.join(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -64,9 +64,7 @@ test.use({
   viewport: { width: 1280, height: 720 },
 });
 
-test("Demo: dropzone, translate to Spanish, switch slide", async ({
-  page,
-}) => {
+test("Demo: dropzone, translate to Spanish, switch slide", async ({ page }) => {
   test.setTimeout(60000);
 
   await page.addInitScript(getMockScript());
@@ -86,10 +84,15 @@ test("Demo: dropzone, translate to Spanish, switch slide", async ({
   const targetInput = page.getByRole("combobox", { name: "Target language" });
   await targetInput.waitFor({ state: "visible", timeout: 10000 });
   // Wait until it's no longer disabled
-  await page.waitForFunction(() => {
-    const input = document.querySelector('input[aria-label="Target language"]') as HTMLInputElement;
-    return input && !input.disabled;
-  }, { timeout: 10000 });
+  await page.waitForFunction(
+    () => {
+      const input = document.querySelector(
+        'input[aria-label="Target language"]',
+      ) as HTMLInputElement;
+      return input && !input.disabled;
+    },
+    { timeout: 10000 },
+  );
   await targetInput.click();
   await targetInput.fill("Spanish");
   await page.waitForTimeout(150);
@@ -101,7 +104,10 @@ test("Demo: dropzone, translate to Spanish, switch slide", async ({
   await page.waitForTimeout(1500);
 
   // Click slide 2 thumbnail in the navigator sidebar
-  const slide2Thumbnail = page.locator("button").filter({ hasText: /2/ }).filter({ hasText: /Problem|Problema/ });
+  const slide2Thumbnail = page
+    .locator("button")
+    .filter({ hasText: /2/ })
+    .filter({ hasText: /Problem|Problema/ });
   await slide2Thumbnail.click();
   await page.waitForTimeout(1000);
 

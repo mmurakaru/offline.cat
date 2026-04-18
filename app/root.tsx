@@ -12,10 +12,11 @@ import {
 
 import type { Route } from "./+types/root";
 import "./app.css";
+import "./lib/check-for-updates";
 import i18n from "./lib/i18n";
 import { ALTERNATE_LOCALES, DEFAULT_LOCALE } from "./lib/locales";
 import "./lib/register-paint-worklets";
-import { ErrorIcon } from "./components/error-icon";
+import { ErrorIcon } from "./components/icons/error-icon";
 
 export const links: Route.LinksFunction = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
