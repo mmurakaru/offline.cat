@@ -97,3 +97,23 @@ jobs:
           includeUpdaterJson: true
           args: --target ${{ matrix.target }} ${{ matrix.rust_features &&
             format('--features {0}', matrix.rust_features) || '' }}
+
+  release-notes:
+    needs: build-and-release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Append auto-generated release notes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+          REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -eu
+          generated=$(gh api "repos/$REPO/releases/generate-notes" \
+            -f tag_name="$TAG" --jq .body)
+          current=$(gh release view "$TAG" --json body --jq .body)
+          printf '%s\n\n---\n\n%s\n' "$current" "$generated" \
+            | gh release edit "$TAG" --notes-file -

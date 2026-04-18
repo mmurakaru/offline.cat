@@ -1,21 +1,21 @@
 # Welcome to offline.cat!
 
-Professional CAT tooling that runs entirely in the browser. No server, no account, no lock-in.
+Free, offline, privacy-first CAT tool. Runs entirely on your device — browser or desktop. No server, no account, no lock-in.
 
-## Why built-in APIs?
+## Why on-device?
 
-offline.cat uses the browser's built-in AI models instead of cloud APIs or bundled models. This means:
+offline.cat runs translation on your machine, not a cloud service. This means:
 
 - **Private** - data never leaves the device
 - **Fast** - no server round-trip
 - **Offline** - works anywhere, no internet required
 - **Free** - no API keys, no tokens, no billing
 
-Requires Chrome 138+ with [on-device language packs](chrome://on-device-translation-internals/) installed.
+The **web build** uses Chrome's built-in Translator API. Requires Chrome 138+ with [on-device language packs](chrome://on-device-translation-internals/) installed.
 
-Future consideration: hybrid mode where users can optionally bring their own model (cloud API or local) for higher quality output, while the built-in model remains the zero-config default.
+The **desktop build** embeds llama.cpp and ships a catalog of small open-weight models ([Gemma 4](https://huggingface.co/unsloth/gemma-4-E4B-it-GGUF), [Qwen 3.5](https://huggingface.co/unsloth/Qwen3.5-4B-GGUF), [Phi-4-mini](https://huggingface.co/unsloth/Phi-4-mini-instruct-GGUF), and more). Download for macOS / Windows / Linux from [Releases](https://github.com/mmurakaru/offline.cat/releases/latest).
 
-## Built-in APIs
+## Built-in APIs (web)
 
 - [Translation API](https://github.com/webmachinelearning/translation-api) - document translation
 - [Streams API](https://github.com/whatwg/streams) - streaming translation results *(future)*
@@ -28,10 +28,9 @@ Future consideration: hybrid mode where users can optionally bring their own mod
 
 - [React Router](https://reactrouter.com/)
 - [SQLite Wasm](https://sqlite.org/wasm/doc/trunk/index.md)
+- [Tauri v2](https://v2.tauri.app/) + desktop dev setup in [`src-tauri/README.md`](./src-tauri/README.md)
 
 ## Getting started
-
-### Installation
 
 Install the dependencies:
 
@@ -41,13 +40,19 @@ npm install
 
 ### Development
 
-Start the development server with HMR:
+Start the web dev server with HMR:
 
 ```bash
 npm run dev
 ```
 
 Your application will be available at `http://localhost:5173`.
+
+For the desktop app (requires Rust + cmake, see [`src-tauri/README.md`](./src-tauri/README.md)):
+
+```bash
+npm run tauri:dev
+```
 
 ## Building for production
 
@@ -71,21 +76,17 @@ Or connect the repo to the Cloudflare Pages dashboard with:
 
 ## Releasing
 
-1. Bump the version in `package.json`
+1. Bump the version in `package.json`, `src-tauri/tauri.conf.json`, and `src-tauri/Cargo.toml`.
 2. Commit, tag, and push:
 
 ```bash
-git add package.json
+git add package.json src-tauri/tauri.conf.json src-tauri/Cargo.toml
 git commit -m "release v<version>"
 git tag v<version>
 git push origin main --follow-tags
 ```
 
-3. Create a GitHub release:
-
-```bash
-gh release create v<version> --title "v<version>" --notes "Release notes here"
-```
+The tag push triggers `.github/workflows/release.yml`, which builds and publishes signed desktop installers per platform plus `latest.json` for the auto-updater.
 
 ### Docker Deployment
 
