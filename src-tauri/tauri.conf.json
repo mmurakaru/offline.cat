@@ -39,7 +39,10 @@
     ],
     "category": "Productivity",
     "shortDescription": "Local-first computer-assisted translation tool.",
-    "longDescription": "offline.cat is a professional CAT tool that runs entirely on your machine using on-device language models. No accounts, no API keys, no telemetry."
+    "longDescription": "offline.cat is a professional CAT tool that runs entirely on your machine using on-device language models. No accounts, no API keys, no telemetry.",
+    "macOS": {
+      "minimumSystemVersion": "11.0"
+    }
   },
   "plugins": {
     "updater": {
