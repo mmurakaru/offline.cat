@@ -1,10 +1,16 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button, DropZone, FileTrigger } from "react-aria-components";
 import { useTranslation } from "react-i18next";
-import { Link, useNavigate } from "react-router";
+import { useNavigate } from "react-router";
 import { DocumentIcon } from "../components/document-icon";
+import { HomeLogoLink } from "../components/HomeLogoLink";
 import { LocaleSwitcher } from "../components/LocaleSwitcher";
-import { OfflineIcon } from "../components/offline-icon";
+import { isInFlight, ModelPickerSelect } from "../components/ModelPickerSelect";
+import { TrashIcon } from "../components/trash-icon";
+import {
+  AUTO_DOWNLOAD_DEFAULT_ID,
+  useModelManager,
+} from "../hooks/useModelManager";
 import { cn } from "../lib/cn";
 import { getDB } from "../lib/db";
 import i18n from "../lib/i18n";
@@ -26,7 +32,74 @@ export default function Create() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [isDragging, setIsDragging] = useState(false);
-  const supported = typeof window !== "undefined" && "Translator" in globalThis;
+  const isTauri =
+    typeof window !== "undefined" &&
+    (window as { isTauri?: boolean }).isTauri === true;
+  const hasChromeTranslator =
+    typeof window !== "undefined" && "Translator" in globalThis;
+
+  const manager = useModelManager();
+  const {
+    catalog,
+    activeId,
+    downloads,
+    loading: catalogLoading,
+    setActive,
+    download,
+  } = manager;
+  const downloadInFlight = useMemo(
+    () => Object.values(downloads).some(isInFlight),
+    [downloads],
+  );
+
+  const supported =
+    (isTauri || hasChromeTranslator) && !(isTauri && downloadInFlight);
+
+  // One-shot auto-setup: if in Tauri, pick the first installed model as active;
+  // if nothing is installed at all, start downloading the recommended default
+  // so the user can translate as soon as it finishes.
+  const autoSetupFiredRef = useRef(false);
+  useEffect(
+    function autoSetupActiveOrDownloadDefault() {
+      if (!isTauri) return;
+      if (catalogLoading) return;
+      if (autoSetupFiredRef.current) return;
+      if (activeId) return;
+      if (downloadInFlight) return;
+
+      const firstInstalled = catalog.find((entry) => entry.installed);
+      if (firstInstalled) {
+        autoSetupFiredRef.current = true;
+        setActive(firstInstalled.id).catch(() => {
+          autoSetupFiredRef.current = false;
+        });
+        return;
+      }
+
+      const defaultEntry = catalog.find(
+        (entry) => entry.id === AUTO_DOWNLOAD_DEFAULT_ID,
+      );
+      if (!defaultEntry) return;
+      autoSetupFiredRef.current = true;
+      (async () => {
+        const phase = await download(defaultEntry.id);
+        if (phase === "done") {
+          await setActive(defaultEntry.id).catch(() => {});
+        }
+      })().catch(() => {
+        autoSetupFiredRef.current = false;
+      });
+    },
+    [
+      isTauri,
+      catalogLoading,
+      activeId,
+      downloadInFlight,
+      catalog,
+      setActive,
+      download,
+    ],
+  );
 
   const handleFile = useCallback(
     async (file: File) => {
@@ -67,9 +140,7 @@ export default function Create() {
 
   return (
     <main className="relative flex flex-col items-center justify-center min-h-screen gap-4 p-4">
-      <Link to={localePath("/")} className="absolute top-4 left-4">
-        <OfflineIcon className="w-9 bg-black dark:bg-white" />
-      </Link>
+      <HomeLogoLink className="absolute top-4 left-4" />
       <div className="absolute top-4 right-4">
         <LocaleSwitcher />
       </div>
@@ -111,9 +182,37 @@ export default function Create() {
             </DropZone>
           </Button>
         </FileTrigger>
+
+        {(isTauri || import.meta.env.DEV) && (
+          <div className="flex items-center justify-between gap-3 mt-1">
+            {import.meta.env.DEV ? (
+              <button
+                type="button"
+                onClick={async () => {
+                  const db = await getDB();
+                  await db.execute("DELETE FROM translation_memory");
+                  await db.execute("DELETE FROM files");
+                  alert(t("create.devCleared"));
+                }}
+                className={cn(
+                  "inline-flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg cursor-pointer transition-colors outline-none",
+                  "bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400",
+                  "hover:bg-red-100 dark:hover:bg-red-950/60",
+                  "focus-visible:ring-2 focus-visible:ring-red-500",
+                )}
+              >
+                <TrashIcon />
+                {t("create.devClear")}
+              </button>
+            ) : (
+              <span />
+            )}
+            {isTauri && <ModelPickerSelect manager={manager} />}
+          </div>
+        )}
       </div>
 
-      {supported ? (
+      {!isTauri && hasChromeTranslator && (
         <p className="text-xs text-grey-6">
           {t("create.offlinePrefix")}{" "}
           <a
@@ -124,23 +223,9 @@ export default function Create() {
           </a>{" "}
           {t("create.offlineSuffix")}
         </p>
-      ) : (
-        <p className="text-xs text-red-400">{t("create.unsupported")}</p>
       )}
-
-      {import.meta.env.DEV && (
-        <button
-          type="button"
-          onClick={async () => {
-            const db = await getDB();
-            await db.execute("DELETE FROM translation_memory");
-            await db.execute("DELETE FROM files");
-            alert(t("create.devCleared"));
-          }}
-          className="text-xs text-red-400 hover:text-red-600 underline cursor-pointer"
-        >
-          {t("create.devClear")}
-        </button>
+      {!isTauri && !hasChromeTranslator && (
+        <p className="text-xs text-red-400">{t("create.unsupported")}</p>
       )}
     </main>
   );

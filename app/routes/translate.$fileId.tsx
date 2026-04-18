@@ -11,6 +11,7 @@ import { useTranslation as useI18n } from "react-i18next";
 import {
   isRouteErrorResponse,
   Link,
+  useLocation,
   useNavigate,
   useParams,
 } from "react-router";
@@ -19,18 +20,19 @@ import { ConfirmDialog } from "../components/ConfirmDialog";
 import { DownloadIcon } from "../components/download-icon";
 import { EditorCanvas } from "../components/EditorCanvas";
 import { ErrorIcon } from "../components/error-icon";
+import { HomeLogoLink } from "../components/HomeLogoLink";
 import { InspectorPanel } from "../components/InspectorPanel";
 import { InspectorToggleIcon } from "../components/inspector-toggle-icon";
 import { LocaleSwitcher } from "../components/LocaleSwitcher";
 import { LoadingIcon } from "../components/loading-icon";
 import { NavigatorSidebar } from "../components/NavigatorSidebar";
 import { OutlineSidebar } from "../components/OutlineSidebar";
-import { OfflineIcon } from "../components/offline-icon";
 import { PlusIcon } from "../components/plus-icon";
 import {
   type SidebarMode,
   SidebarViewToggle,
 } from "../components/SidebarViewToggle";
+import { SettingsIcon } from "../components/settings-icon";
 import { MyToastRegion, queue } from "../components/ToastRegion";
 import { TranslateIcon } from "../components/translate-icon";
 import { useEditorHotkeys } from "../hooks/useEditorHotkeys";
@@ -39,6 +41,7 @@ import type { Segment } from "../hooks/useTranslation";
 import { useTranslation } from "../hooks/useTranslation";
 import { cn } from "../lib/cn";
 import i18n from "../lib/i18n";
+import { getSourceLanguages, getTargetLanguages } from "../lib/languages";
 import { localePath } from "../lib/localePath";
 import { reconstructFile } from "../lib/parser-client";
 import { addTranslationMemoryEntry } from "../lib/translation-memory";
@@ -52,111 +55,6 @@ export function meta() {
       content: i18n.t("meta.editorDescription"),
     },
   ];
-}
-
-const LANGUAGES: Record<string, string> = {
-  ar: "Arabic",
-  bg: "Bulgarian",
-  bn: "Bengali",
-  cs: "Czech",
-  da: "Danish",
-  de: "German",
-  el: "Greek",
-  en: "English",
-  es: "Spanish",
-  fi: "Finnish",
-  fr: "French",
-  hi: "Hindi",
-  hr: "Croatian",
-  hu: "Hungarian",
-  id: "Indonesian",
-  it: "Italian",
-  iw: "Hebrew",
-  ja: "Japanese",
-  kn: "Kannada",
-  ko: "Korean",
-  lt: "Lithuanian",
-  mr: "Marathi",
-  nl: "Dutch",
-  no: "Norwegian",
-  pl: "Polish",
-  pt: "Portuguese",
-  ro: "Romanian",
-  ru: "Russian",
-  sk: "Slovak",
-  sl: "Slovenian",
-  sv: "Swedish",
-  ta: "Tamil",
-  te: "Telugu",
-  th: "Thai",
-  tr: "Turkish",
-  uk: "Ukrainian",
-  vi: "Vietnamese",
-  zh: "Chinese",
-  "zh-Hant": "Chinese (Traditional)",
-};
-
-// Chrome Translation API language pairs - direction matters
-const LANGUAGE_PAIRS: [string, string][] = [
-  // en -> X
-  ["en", "es"],
-  ["en", "ja"],
-  ["en", "fr"],
-  ["en", "hi"],
-  ["en", "it"],
-  ["en", "ko"],
-  ["en", "nl"],
-  ["en", "pl"],
-  ["en", "pt"],
-  ["en", "ru"],
-  ["en", "th"],
-  ["en", "tr"],
-  ["en", "vi"],
-  ["en", "zh"],
-  ["en", "zh-Hant"],
-  ["en", "fi"],
-  ["en", "hr"],
-  ["en", "hu"],
-  ["en", "id"],
-  ["en", "iw"],
-  ["en", "lt"],
-  ["en", "no"],
-  ["en", "ro"],
-  ["en", "sk"],
-  ["en", "sl"],
-  ["en", "sv"],
-  ["en", "uk"],
-  ["en", "kn"],
-  ["en", "ta"],
-  ["en", "te"],
-  ["en", "mr"],
-  // X -> en
-  ["ar", "en"],
-  ["bn", "en"],
-  ["de", "en"],
-  ["bg", "en"],
-  ["cs", "en"],
-  ["da", "en"],
-  ["el", "en"],
-];
-
-function getSourceLanguages() {
-  const sources = new Set(LANGUAGE_PAIRS.map(([source]) => source));
-  return [...sources]
-    .map((id) => ({ id, name: LANGUAGES[id] }))
-    .sort((a, b) => a.name.localeCompare(b.name));
-}
-
-function getTargetLanguages(sourceLanguage: string) {
-  if (!sourceLanguage) {
-    const targets = new Set(LANGUAGE_PAIRS.map(([_source, target]) => target));
-    return [...targets]
-      .map((id) => ({ id, name: LANGUAGES[id] }))
-      .sort((a, b) => a.name.localeCompare(b.name));
-  }
-  return LANGUAGE_PAIRS.filter(([source]) => source === sourceLanguage)
-    .map(([_source, target]) => ({ id: target, name: LANGUAGES[target] }))
-    .sort((a, b) => a.name.localeCompare(b.name));
 }
 
 function LeftSidebarCollapsedNav({
@@ -178,7 +76,8 @@ function LeftSidebarCollapsedNav({
       <div className="flex flex-col items-center gap-1 px-1 pt-1">
         {Array.from({ length: count }, (_, index) => (
           <button
-            key={index}
+            // biome-ignore lint/suspicious/noArrayIndexKey: numbered slides/pages have no identity beyond their position, and the list length is stable for the lifetime of the file.
+            key={`${fileType}-nav-${index}`}
             type="button"
             onClick={() => onClickIndex(index)}
             className={cn(
@@ -265,6 +164,7 @@ export default function Translate() {
   const { t } = useI18n();
   const { fileId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const [targetLanguage, setTargetLanguage] = useState("");
   const [activeSlide, setActiveSlide] = useState(0);
   const [activeSegmentId, setActiveSegmentId] = useState<string | null>(null);
@@ -611,12 +511,7 @@ export default function Translate() {
         {...(sidebarMode === "preview" && { "data-collapsed": "" })}
       >
         <div className="py-2 px-1 shrink-0">
-          <Link
-            to={localePath("/")}
-            className="inline-flex items-center justify-center h-9 w-9 shrink-0"
-          >
-            <OfflineIcon className="w-9 bg-black dark:bg-white" />
-          </Link>
+          <HomeLogoLink className="inline-flex items-center justify-center h-9 w-9 shrink-0" />
         </div>
         {sidebarMode === "preview" ? (
           <LeftSidebarCollapsedNav
@@ -856,8 +751,23 @@ export default function Translate() {
             ) : (
               <InspectorCollapsedIcons segment={activeSegment} />
             )}
-            <div className={cn("mt-auto pb-2", inspectorOpen ? "flex justify-end px-2.5" : "flex flex-col items-center")}>
-              <LocaleSwitcher className={inspectorOpen ? undefined : "flex-col"} />
+            <div
+              className={cn(
+                "mt-auto pb-2 flex flex-col items-center gap-2",
+                inspectorOpen && "items-end px-2.5",
+              )}
+            >
+              <LocaleSwitcher
+                className={inspectorOpen ? undefined : "flex-col"}
+              />
+              <Link
+                to={`${localePath("/settings")}?from=${encodeURIComponent(`${location.pathname}${location.search}`)}`}
+                aria-label={t("editor.openSettings")}
+                title={t("editor.openSettings")}
+                className="p-1.5 rounded-md cursor-pointer text-grey-6 hover:text-grey-8 dark:hover:text-grey-4 hover:bg-grey-3 dark:hover:bg-grey-15 transition-colors"
+              >
+                <SettingsIcon />
+              </Link>
             </div>
           </div>
         </div>
