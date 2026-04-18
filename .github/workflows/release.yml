@@ -98,6 +98,46 @@ jobs:
           args: --target ${{ matrix.target }} ${{ matrix.rust_features &&
             format('--features {0}', matrix.rust_features) || '' }}
 
+  upload-aliases:
+    needs: build-and-release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Upload versionless asset aliases
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+          REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -eu
+          mkdir -p /tmp/dl && cd /tmp/dl
+
+          gh release download "$TAG" --repo "$REPO" \
+            --pattern "offline.cat_*_aarch64.dmg" \
+            --pattern "offline.cat_*_x64.dmg" \
+            --pattern "offline.cat_*_x64_en-US.msi" \
+            --pattern "offline.cat_*_amd64.AppImage"
+
+          cp offline.cat_*_aarch64.dmg    offline.cat_aarch64.dmg
+          cp offline.cat_*_x64.dmg        offline.cat_x64.dmg
+          cp offline.cat_*_x64_en-US.msi  offline.cat_x64_en-US.msi
+          cp offline.cat_*_amd64.AppImage offline.cat_amd64.AppImage
+
+          existing=$(gh release view "$TAG" --repo "$REPO" --json assets --jq '.assets[].name')
+          for alias in \
+              offline.cat_aarch64.dmg \
+              offline.cat_x64.dmg \
+              offline.cat_x64_en-US.msi \
+              offline.cat_amd64.AppImage; do
+            if printf '%s\n' "$existing" | grep -qx "$alias"; then
+              echo "Alias $alias already exists, skipping"
+            else
+              gh release upload "$TAG" --repo "$REPO" "$alias"
+            fi
+          done
+
   release-notes:
     needs: build-and-release
     runs-on: ubuntu-latest
@@ -114,6 +154,6 @@ jobs:
           set -eu
           generated=$(gh api "repos/$REPO/releases/generate-notes" \
             -f tag_name="$TAG" --jq .body)
-          current=$(gh release view "$TAG" --json body --jq .body)
+          current=$(gh release view "$TAG" --repo "$REPO" --json body --jq .body)
           printf '%s\n\n---\n\n%s\n' "$current" "$generated" \
-            | gh release edit "$TAG" --notes-file -
+            | gh release edit "$TAG" --repo "$REPO" --notes-file -
