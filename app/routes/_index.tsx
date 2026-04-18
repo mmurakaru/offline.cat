@@ -2,12 +2,12 @@ import { useEffect, useState } from "react";
 import { Link } from "react-aria-components";
 import { useTranslation } from "react-i18next";
 import { Link as RouterLink, redirect } from "react-router";
-import { AppleIcon } from "../components/apple-icon";
-import { CoffeeIcon } from "../components/coffee-icon";
-import { GithubIcon } from "../components/github-icon";
+import { AppleIcon } from "../components/icons/apple-icon";
+import { CoffeeIcon } from "../components/icons/coffee-icon";
+import { GithubIcon } from "../components/icons/github-icon";
+import { OfflineIcon } from "../components/icons/offline-icon";
+import { RocketIcon } from "../components/icons/rocket-icon";
 import { LocaleSwitcher } from "../components/LocaleSwitcher";
-import { OfflineIcon } from "../components/offline-icon";
-import { RocketIcon } from "../components/rocket-icon";
 import {
   type DownloadTarget,
   detectTarget,
@@ -16,6 +16,7 @@ import {
 } from "../lib/download-url";
 import i18n from "../lib/i18n";
 import { localePath } from "../lib/localePath";
+import { isTauriRuntime } from "../lib/runtime";
 
 export function meta() {
   return [
@@ -31,8 +32,7 @@ export function meta() {
 // Inside the Tauri desktop app, redirect straight to /create. This runs
 // before the component renders, so there's no flash of the homepage.
 export async function clientLoader() {
-  if (typeof window === "undefined") return null;
-  if ((window as { isTauri?: boolean }).isTauri !== true) return null;
+  if (!isTauriRuntime()) return null;
   throw redirect(localePath("/create"));
 }
 

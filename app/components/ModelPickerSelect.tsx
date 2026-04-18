@@ -11,9 +11,9 @@ import { useTranslation } from "react-i18next";
 import type { DownloadStatus, useModelManager } from "../hooks/useModelManager";
 import { cn } from "../lib/cn";
 import type { CatalogEntry } from "../lib/models";
-import { ChevronDownIcon } from "./chevron-down-icon";
-import { SettingsIcon } from "./settings-icon";
-import { XIcon } from "./x-icon";
+import { ChevronDownIcon } from "./icons/chevron-down-icon";
+import { SettingsIcon } from "./icons/settings-icon";
+import { XIcon } from "./icons/x-icon";
 
 const FEATURED_IDS = ["gemma-4-e4b", "qwen-3.5-4b", "llama-3.3-8b"] as const;
 

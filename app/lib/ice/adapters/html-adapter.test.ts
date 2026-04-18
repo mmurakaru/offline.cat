@@ -28,7 +28,8 @@ describe("htmlParser", () => {
 
     it("includes raw HTML in editor model", () => {
       const result = htmlParser.parse(toBytes(sampleHtml));
-      if (result.editorModel.mode !== "html-preview") throw new Error("wrong mode");
+      if (result.editorModel.mode !== "html-preview")
+        throw new Error("wrong mode");
       expect(result.editorModel.rawHtml).toBe(sampleHtml);
     });
 

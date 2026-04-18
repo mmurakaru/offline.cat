@@ -69,7 +69,9 @@ pub async fn download_model(
         Ok(()) => Ok(()),
         Err(err) => {
             let msg = format!("{err:#}");
-            sink(DownloadEvent::Failed { message: msg.clone() });
+            sink(DownloadEvent::Failed {
+                message: msg.clone(),
+            });
             Err(msg)
         }
     }
@@ -113,12 +115,11 @@ pub async fn load_model(id: String, state: State<'_, AppState>) -> Result<(), St
     let id_owned = entry.id.to_string();
     let template = entry.chat_template;
 
-    let active = tokio::task::spawn_blocking(move || {
-        ActiveModel::load(id_owned, &path_owned, template)
-    })
-    .await
-    .map_err(|e| format!("load task panicked: {e}"))?
-    .map_err(|e| format!("failed to load model: {e:#}"))?;
+    let active =
+        tokio::task::spawn_blocking(move || ActiveModel::load(id_owned, &path_owned, template))
+            .await
+            .map_err(|e| format!("load task panicked: {e}"))?
+            .map_err(|e| format!("failed to load model: {e:#}"))?;
 
     let mut guard = state.active_model.lock().await;
     *guard = Some(active);
@@ -187,8 +188,8 @@ pub async fn translate(
             cancel: state.cancel_translate.clone(),
         };
 
-        let translation = engine::translate(active, req)
-            .map_err(|e| format!("translation failed: {e:#}"))?;
+        let translation =
+            engine::translate(active, req).map_err(|e| format!("translation failed: {e:#}"))?;
 
         let result = TranslateProgress {
             id: segment.id.clone(),

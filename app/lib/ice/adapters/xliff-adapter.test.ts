@@ -65,19 +65,21 @@ describe("xliffParser", () => {
 
   describe("reconstruct", () => {
     it("injects translations into target elements", () => {
-      const translations = new Map([
-        ["2", "Welt"],
-      ]);
-      const result = xliffParser.reconstruct(toBytes(sampleXliff), translations);
+      const translations = new Map([["2", "Welt"]]);
+      const result = xliffParser.reconstruct(
+        toBytes(sampleXliff),
+        translations,
+      );
       const output = new TextDecoder().decode(result);
       expect(output).toContain("Welt");
     });
 
     it("creates target elements when missing", () => {
-      const translations = new Map([
-        ["2", "Welt"],
-      ]);
-      const result = xliffParser.reconstruct(toBytes(sampleXliff), translations);
+      const translations = new Map([["2", "Welt"]]);
+      const result = xliffParser.reconstruct(
+        toBytes(sampleXliff),
+        translations,
+      );
       const output = new TextDecoder().decode(result);
       // Unit 2 had no <target>, now it should
       expect(output).toMatch(/<target[^>]*>Welt<\/target>/);

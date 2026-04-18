@@ -77,9 +77,7 @@ impl Downloader {
         cancel: Arc<AtomicBool>,
         on_event: &EventSink,
     ) -> Result<()> {
-        let parent = target_path
-            .parent()
-            .context("target path has no parent")?;
+        let parent = target_path.parent().context("target path has no parent")?;
         fs::create_dir_all(parent)
             .await
             .context("failed to create models directory")?;
@@ -95,7 +93,10 @@ impl Downloader {
             request = request.header("Range", format!("bytes={resume_from}-"));
         }
 
-        let response = request.send().await.context("request to HuggingFace failed")?;
+        let response = request
+            .send()
+            .await
+            .context("request to HuggingFace failed")?;
 
         if !response.status().is_success() && response.status().as_u16() != 206 {
             bail!("HuggingFace returned status {}", response.status());
@@ -145,9 +146,7 @@ impl Downloader {
             let actual = sha256_of(&partial_path).await?;
             if !actual.eq_ignore_ascii_case(expected) {
                 fs::remove_file(&partial_path).await.ok();
-                bail!(
-                    "SHA256 mismatch: expected {expected}, got {actual}. Partial file removed."
-                );
+                bail!("SHA256 mismatch: expected {expected}, got {actual}. Partial file removed.");
             }
         }
 
@@ -161,7 +160,9 @@ impl Downloader {
 }
 
 async fn sha256_of(path: &Path) -> Result<String> {
-    let bytes = fs::read(path).await.context("failed to read file for hash")?;
+    let bytes = fs::read(path)
+        .await
+        .context("failed to read file for hash")?;
     let mut hasher = Sha256::new();
     hasher.update(&bytes);
     Ok(hex::encode(hasher.finalize()))
@@ -182,9 +183,7 @@ mod tests {
 
     #[test]
     fn download_event_serializes_field_names_as_camel_case() {
-        let started = DownloadEvent::Started {
-            total_bytes: 1234,
-        };
+        let started = DownloadEvent::Started { total_bytes: 1234 };
         assert_eq!(
             serde_json::to_value(&started).unwrap(),
             json!({ "kind": "started", "totalBytes": 1234 }),
@@ -262,8 +261,13 @@ mod tests {
         assert_eq!(tokio::fs::read(&target).await.unwrap(), body);
 
         let events = events.lock().unwrap();
-        assert!(matches!(events.first(), Some(DownloadEvent::Started { .. })));
-        assert!(events.iter().any(|e| matches!(e, DownloadEvent::Progress { .. })));
+        assert!(matches!(
+            events.first(),
+            Some(DownloadEvent::Started { .. })
+        ));
+        assert!(events
+            .iter()
+            .any(|e| matches!(e, DownloadEvent::Progress { .. })));
         assert!(events.iter().any(|e| matches!(e, DownloadEvent::Verifying)));
         assert!(matches!(events.last(), Some(DownloadEvent::Finished)));
     }
@@ -297,7 +301,10 @@ mod tests {
             .unwrap_err();
 
         assert!(format!("{err:#}").contains("SHA256 mismatch"));
-        assert!(!target.exists(), "target file must not exist on hash failure");
+        assert!(
+            !target.exists(),
+            "target file must not exist on hash failure"
+        );
         assert!(
             !target.with_extension("gguf.partial").exists(),
             "partial file should be cleaned up on hash failure",
@@ -333,7 +340,11 @@ mod tests {
         assert!(format!("{err:#}").contains("500"));
         assert!(!target.exists());
         assert!(
-            !events.lock().unwrap().iter().any(|e| matches!(e, DownloadEvent::Started { .. })),
+            !events
+                .lock()
+                .unwrap()
+                .iter()
+                .any(|e| matches!(e, DownloadEvent::Started { .. })),
             "Started event should not fire when server returns error",
         );
     }
@@ -372,7 +383,10 @@ mod tests {
             .unwrap();
 
         let final_bytes = tokio::fs::read(&target).await.unwrap();
-        assert_eq!(final_bytes, full_body, "resumed download must match full file");
+        assert_eq!(
+            final_bytes, full_body,
+            "resumed download must match full file"
+        );
     }
 
     #[tokio::test]
@@ -411,13 +425,24 @@ mod tests {
             .await
             .expect("cancelled download should return Ok, not Err");
 
-        assert!(!target.exists(), "cancelled download must not produce final file");
         assert!(
-            events.lock().unwrap().iter().any(|e| matches!(e, DownloadEvent::Cancelled)),
+            !target.exists(),
+            "cancelled download must not produce final file"
+        );
+        assert!(
+            events
+                .lock()
+                .unwrap()
+                .iter()
+                .any(|e| matches!(e, DownloadEvent::Cancelled)),
             "Cancelled event must be emitted",
         );
         assert!(
-            !events.lock().unwrap().iter().any(|e| matches!(e, DownloadEvent::Finished)),
+            !events
+                .lock()
+                .unwrap()
+                .iter()
+                .any(|e| matches!(e, DownloadEvent::Finished)),
             "Finished must not be emitted on cancel",
         );
     }

@@ -1,11 +1,17 @@
-import { expect, test } from "@playwright/test";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { expect, test } from "@playwright/test";
 
-const fixtures = path.join(path.dirname(fileURLToPath(import.meta.url)), "fixtures");
+const fixtures = path.join(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "fixtures",
+);
 
 // Helper to upload a file and wait for the translate page
-async function uploadFile(page: import("@playwright/test").Page, filename: string) {
+async function uploadFile(
+  page: import("@playwright/test").Page,
+  filename: string,
+) {
   await page.goto("/create");
   await page.waitForLoadState("networkidle");
   const fileInput = page.locator('input[type="file"]');
@@ -32,7 +38,9 @@ test.describe("Canvas modes", () => {
     await expect(page.getByText("DOCX")).toBeVisible({ timeout: 10000 });
 
     // Document content should render
-    await expect(page.getByText("Welcome to our document").first()).toBeVisible();
+    await expect(
+      page.getByText("Welcome to our document").first(),
+    ).toBeVisible();
   });
 
   test("HTML renders preview with HTML badge", async ({ page }) => {
@@ -44,13 +52,17 @@ test.describe("Canvas modes", () => {
     });
 
     // HTML content should appear
-    await expect(page.getByText("Welcome to our website").first()).toBeVisible();
+    await expect(
+      page.getByText("Welcome to our website").first(),
+    ).toBeVisible();
   });
 
   test("XLIFF renders segment list editor", async ({ page }) => {
     await uploadFile(page, "sample.xliff");
 
     await expect(page.getByText("XLIFF")).toBeVisible({ timeout: 10000 });
-    await expect(page.getByText("Welcome to our product").first()).toBeVisible();
+    await expect(
+      page.getByText("Welcome to our product").first(),
+    ).toBeVisible();
   });
 });

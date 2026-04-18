@@ -2,6 +2,7 @@ import { useCallback, useMemo, useRef, useState } from "react";
 import {
   Button,
   ComboBox,
+  Focusable,
   Input,
   ListBox,
   ListBoxItem,
@@ -15,26 +16,27 @@ import {
   useNavigate,
   useParams,
 } from "react-router";
-import { ArrowRightIcon } from "../components/arrow-right-icon";
 import { ConfirmDialog } from "../components/ConfirmDialog";
-import { DownloadIcon } from "../components/download-icon";
 import { EditorCanvas } from "../components/EditorCanvas";
-import { ErrorIcon } from "../components/error-icon";
 import { HomeLogoLink } from "../components/HomeLogoLink";
+import { IconButtonTooltip } from "../components/IconButtonTooltip";
 import { InspectorPanel } from "../components/InspectorPanel";
-import { InspectorToggleIcon } from "../components/inspector-toggle-icon";
+import { ArrowRightIcon } from "../components/icons/arrow-right-icon";
+import { DownloadIcon } from "../components/icons/download-icon";
+import { ErrorIcon } from "../components/icons/error-icon";
+import { GlobeIcon } from "../components/icons/globe-icon";
+import { InspectorToggleIcon } from "../components/icons/inspector-toggle-icon";
+import { LoadingIcon } from "../components/icons/loading-icon";
+import { PlusIcon } from "../components/icons/plus-icon";
+import { SettingsIcon } from "../components/icons/settings-icon";
 import { LocaleSwitcher } from "../components/LocaleSwitcher";
-import { LoadingIcon } from "../components/loading-icon";
 import { NavigatorSidebar } from "../components/NavigatorSidebar";
 import { OutlineSidebar } from "../components/OutlineSidebar";
-import { PlusIcon } from "../components/plus-icon";
 import {
   type SidebarMode,
   SidebarViewToggle,
 } from "../components/SidebarViewToggle";
-import { SettingsIcon } from "../components/settings-icon";
 import { MyToastRegion, queue } from "../components/ToastRegion";
-import { TranslateIcon } from "../components/translate-icon";
 import { useEditorHotkeys } from "../hooks/useEditorHotkeys";
 import { useFileParsing } from "../hooks/useFileParsing";
 import type { Segment } from "../hooks/useTranslation";
@@ -44,6 +46,7 @@ import i18n from "../lib/i18n";
 import { getSourceLanguages, getTargetLanguages } from "../lib/languages";
 import { localePath } from "../lib/localePath";
 import { reconstructFile } from "../lib/parser-client";
+import { isTauriRuntime } from "../lib/runtime";
 import { addTranslationMemoryEntry } from "../lib/translation-memory";
 import { translateSegments } from "../lib/translator";
 
@@ -568,21 +571,25 @@ export default function Translate() {
                   confirmLabel={t("editor.discardConfirm")}
                   onConfirm={() => navigate(localePath("/create"))}
                 >
+                  <IconButtonTooltip label={t("editor.newFile")}>
+                    <Button
+                      className="p-2 rounded-lg hover:bg-black/5 active:bg-black/10 dark:hover:bg-white/10 dark:active:bg-white/15 cursor-pointer text-grey-7 dark:text-grey-6 transition-colors"
+                      aria-label={t("editor.newFile")}
+                    >
+                      <PlusIcon />
+                    </Button>
+                  </IconButtonTooltip>
+                </ConfirmDialog>
+              ) : (
+                <IconButtonTooltip label={t("editor.newFile")}>
                   <Button
+                    onPress={() => navigate(localePath("/create"))}
                     className="p-2 rounded-lg hover:bg-black/5 active:bg-black/10 dark:hover:bg-white/10 dark:active:bg-white/15 cursor-pointer text-grey-7 dark:text-grey-6 transition-colors"
                     aria-label={t("editor.newFile")}
                   >
                     <PlusIcon />
                   </Button>
-                </ConfirmDialog>
-              ) : (
-                <Button
-                  onPress={() => navigate(localePath("/create"))}
-                  className="p-2 rounded-lg hover:bg-black/5 active:bg-black/10 dark:hover:bg-white/10 dark:active:bg-white/15 cursor-pointer text-grey-7 dark:text-grey-6 transition-colors"
-                  aria-label={t("editor.newFile")}
-                >
-                  <PlusIcon />
-                </Button>
+                </IconButtonTooltip>
               )}
               <span className="font-medium text-sm truncate">
                 {displayName}
@@ -672,23 +679,29 @@ export default function Translate() {
                 </Popover>
               </ComboBox>
 
-              <Button
-                onPress={handleTranslate}
-                isDisabled={isTranslating || !sourceLanguage || !targetLanguage}
-                className="p-2 rounded-lg cursor-pointer transition-colors text-grey-7 dark:text-grey-6 hover:bg-black/5 active:bg-black/10 dark:hover:bg-white/10 dark:active:bg-white/15 disabled:opacity-40 disabled:cursor-not-allowed"
-                aria-label={t("editor.translate")}
-              >
-                {isTranslating ? <LoadingIcon /> : <TranslateIcon />}
-              </Button>
+              <IconButtonTooltip label={t("editor.translate")}>
+                <Button
+                  onPress={handleTranslate}
+                  isDisabled={
+                    isTranslating || !sourceLanguage || !targetLanguage
+                  }
+                  className="p-2 rounded-lg cursor-pointer transition-colors text-grey-7 dark:text-grey-6 hover:bg-black/5 active:bg-black/10 dark:hover:bg-white/10 dark:active:bg-white/15 disabled:opacity-40 disabled:cursor-not-allowed"
+                  aria-label={t("editor.translate")}
+                >
+                  {isTranslating ? <LoadingIcon /> : <GlobeIcon />}
+                </Button>
+              </IconButtonTooltip>
 
-              <Button
-                onPress={handleDownload}
-                isDisabled={stats.translated === 0 || isDownloading}
-                className="p-2 rounded-lg hover:bg-black/5 active:bg-black/10 dark:hover:bg-white/10 dark:active:bg-white/15 cursor-pointer text-grey-7 dark:text-grey-6 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                aria-label={t("editor.download")}
-              >
-                {isDownloading ? <LoadingIcon /> : <DownloadIcon />}
-              </Button>
+              <IconButtonTooltip label={t("editor.download")}>
+                <Button
+                  onPress={handleDownload}
+                  isDisabled={stats.translated === 0 || isDownloading}
+                  className="p-2 rounded-lg hover:bg-black/5 active:bg-black/10 dark:hover:bg-white/10 dark:active:bg-white/15 cursor-pointer text-grey-7 dark:text-grey-6 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  aria-label={t("editor.download")}
+                >
+                  {isDownloading ? <LoadingIcon /> : <DownloadIcon />}
+                </Button>
+              </IconButtonTooltip>
             </div>
             <div
               className="inspector-spacer shrink-0"
@@ -732,14 +745,18 @@ export default function Translate() {
             {...(!inspectorOpen && { "data-collapsed": "" })}
           >
             <div className="flex justify-end px-2.5 py-2 shrink-0">
-              <button
-                type="button"
-                onClick={() => setInspectorOpen((open) => !open)}
-                className="p-1 rounded-md hover:bg-black/5 active:bg-black/10 dark:hover:bg-white/10 dark:active:bg-white/15 cursor-pointer text-grey-7 dark:text-grey-6 transition-colors"
-                aria-label={t("editor.toggleInspector")}
-              >
-                <InspectorToggleIcon />
-              </button>
+              <IconButtonTooltip label={t("editor.toggleInspector")}>
+                <Focusable>
+                  <button
+                    type="button"
+                    onClick={() => setInspectorOpen((open) => !open)}
+                    className="p-1 rounded-md hover:bg-black/5 active:bg-black/10 dark:hover:bg-white/10 dark:active:bg-white/15 cursor-pointer text-grey-7 dark:text-grey-6 transition-colors"
+                    aria-label={t("editor.toggleInspector")}
+                  >
+                    <InspectorToggleIcon />
+                  </button>
+                </Focusable>
+              </IconButtonTooltip>
             </div>
             {inspectorOpen ? (
               <div className="flex-1 overflow-hidden min-w-60">
@@ -760,14 +777,19 @@ export default function Translate() {
               <LocaleSwitcher
                 className={inspectorOpen ? undefined : "flex-col"}
               />
-              <Link
-                to={`${localePath("/settings")}?from=${encodeURIComponent(`${location.pathname}${location.search}`)}`}
-                aria-label={t("editor.openSettings")}
-                title={t("editor.openSettings")}
-                className="p-1.5 rounded-md cursor-pointer text-grey-6 hover:text-grey-8 dark:hover:text-grey-4 hover:bg-grey-3 dark:hover:bg-grey-15 transition-colors"
-              >
-                <SettingsIcon />
-              </Link>
+              {isTauriRuntime() && (
+                <IconButtonTooltip label={t("editor.openSettings")}>
+                  <Focusable>
+                    <Link
+                      to={`${localePath("/settings")}?from=${encodeURIComponent(`${location.pathname}${location.search}`)}`}
+                      aria-label={t("editor.openSettings")}
+                      className="p-1.5 rounded-md cursor-pointer text-grey-6 hover:text-grey-8 dark:hover:text-grey-4 hover:bg-grey-3 dark:hover:bg-grey-15 transition-colors"
+                    >
+                      <SettingsIcon />
+                    </Link>
+                  </Focusable>
+                </IconButtonTooltip>
+              )}
             </div>
           </div>
         </div>

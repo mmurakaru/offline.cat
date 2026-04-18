@@ -48,20 +48,16 @@ let clientPromise: Promise<SqliteClient> | null = null;
 
 function createClient(): Promise<SqliteClient> {
   return new Promise((resolveClient, rejectClient) => {
-    if (
-      typeof window === "undefined" ||
-      typeof window.Worker === "undefined"
-    ) {
+    if (typeof window === "undefined" || typeof window.Worker === "undefined") {
       rejectClient(
         new Error("Web Workers are not available in this environment."),
       );
       return;
     }
 
-    const worker = new Worker(
-      new URL("./db-worker.ts", import.meta.url),
-      { type: "module" },
-    );
+    const worker = new Worker(new URL("./db-worker.ts", import.meta.url), {
+      type: "module",
+    });
 
     const pending = new Map<string, PendingRequest>();
 
@@ -89,9 +85,7 @@ function createClient(): Promise<SqliteClient> {
     };
 
     worker.onerror = (event) => {
-      rejectClient(
-        new Error(`Worker error: ${event.message}`),
-      );
+      rejectClient(new Error(`Worker error: ${event.message}`));
     };
 
     function send(

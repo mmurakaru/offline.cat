@@ -1,5 +1,10 @@
 import { unzipSync } from "fflate";
-import type { FormatParser, ParseResult } from "../parser-interface";
+import {
+  extractPptxLayoutFromFiles,
+  extractSegmentsFromFiles,
+  extractSlideImages,
+  reconstructPptx,
+} from "../../parsers/pptx";
 import type {
   FontStyle,
   ImageRef,
@@ -9,12 +14,7 @@ import type {
   SolidFill,
   TextRegion,
 } from "../editor-model";
-import {
-  extractPptxLayoutFromFiles,
-  extractSegmentsFromFiles,
-  extractSlideImages,
-  reconstructPptx,
-} from "../../parsers/pptx";
+import type { FormatParser, ParseResult } from "../parser-interface";
 
 function mapFill(
   raw: import("../../parsers/pptx").ShapeFill | undefined,

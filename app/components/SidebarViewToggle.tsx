@@ -6,10 +6,11 @@ import {
   Popover,
 } from "react-aria-components";
 import { useTranslation } from "react-i18next";
-import { LayoutIcon } from "./layout-icon";
-import { NumberedListIcon } from "./numbered-list-icon";
-import { PreviewIcon } from "./preview-icon";
-import { SidebarIcon } from "./sidebar-icon";
+import { IconButtonTooltip } from "./IconButtonTooltip";
+import { LayoutIcon } from "./icons/layout-icon";
+import { NumberedListIcon } from "./icons/numbered-list-icon";
+import { PreviewIcon } from "./icons/preview-icon";
+import { SidebarIcon } from "./icons/sidebar-icon";
 
 export type SidebarMode = "navigator" | "outline" | "preview";
 
@@ -41,12 +42,14 @@ export function SidebarViewToggle({
 
   return (
     <MenuTrigger>
-      <Button
-        aria-label={t("sidebar.view")}
-        className="p-2 rounded-lg hover:bg-black/5 active:bg-black/10 dark:hover:bg-white/10 dark:active:bg-white/15 cursor-pointer text-grey-7 dark:text-grey-6 transition-colors"
-      >
-        <SidebarIcon />
-      </Button>
+      <IconButtonTooltip label={t("sidebar.view")}>
+        <Button
+          aria-label={t("sidebar.view")}
+          className="p-2 rounded-lg hover:bg-black/5 active:bg-black/10 dark:hover:bg-white/10 dark:active:bg-white/15 cursor-pointer text-grey-7 dark:text-grey-6 transition-colors"
+        >
+          <SidebarIcon />
+        </Button>
+      </IconButtonTooltip>
       <Popover className="bg-grey-1 dark:bg-grey-23 border border-grey-3 dark:border-ui-divider rounded-lg shadow-lg py-1 min-w-[160px]">
         <Menu
           onAction={(key) => onModeChange(key as SidebarMode)}

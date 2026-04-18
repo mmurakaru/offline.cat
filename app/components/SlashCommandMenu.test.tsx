@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { SlashCommandMenu } from "./SlashCommandMenu";
@@ -75,8 +75,12 @@ describe("<SlashCommandMenu />", () => {
     render(<SlashCommandMenu items={mockItems} command={command} />);
 
     // Assert
-    const firstButton = screen.getByText("Insert the source text").closest("button")!;
-    const secondButton = screen.getByText("Translate with AI").closest("button")!;
+    const firstButton = screen
+      .getByText("Insert the source text")
+      .closest("button")!;
+    const secondButton = screen
+      .getByText("Translate with AI")
+      .closest("button")!;
     expect(firstButton.className).toContain("primary");
     expect(secondButton.className).not.toContain("primary");
   });

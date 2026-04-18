@@ -50,9 +50,7 @@ describe("useTranslation", () => {
       return [];
     });
     const { result } = renderHook(() => useTranslation());
-    const segments = [
-      { id: "1", source: "Hello", needsTranslation: true },
-    ];
+    const segments = [{ id: "1", source: "Hello", needsTranslation: true }];
 
     // Act
     await act(async () => {
@@ -66,9 +64,7 @@ describe("useTranslation", () => {
   it("skips translation when no segments need translating", async () => {
     // Arrange
     const { result } = renderHook(() => useTranslation());
-    const segments = [
-      { id: "1", source: "Hello", needsTranslation: false },
-    ];
+    const segments = [{ id: "1", source: "Hello", needsTranslation: false }];
 
     // Act
     await act(async () => {
@@ -84,9 +80,7 @@ describe("useTranslation", () => {
     // Arrange
     mockTranslateSegments.mockRejectedValue(new Error("Translation failed"));
     const { result } = renderHook(() => useTranslation());
-    const segments = [
-      { id: "1", source: "Hello", needsTranslation: true },
-    ];
+    const segments = [{ id: "1", source: "Hello", needsTranslation: true }];
 
     // Act
     await act(async () => {
@@ -107,9 +101,7 @@ describe("useTranslation", () => {
       },
     );
     const { result } = renderHook(() => useTranslation());
-    const segments = [
-      { id: "1", source: "Hello", needsTranslation: true },
-    ];
+    const segments = [{ id: "1", source: "Hello", needsTranslation: true }];
 
     // Act
     await act(async () => {

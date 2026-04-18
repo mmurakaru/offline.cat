@@ -4,11 +4,11 @@ import {
   SlashCommandMenu,
   type SlashCommandMenuRef,
 } from "../components/SlashCommandMenu";
-import type { SlashCommand, CommandCallbacks } from "../lib/slash-commands";
+import type { CommandCallbacks, SlashCommand } from "../lib/slash-commands";
 import {
+  executeCommand,
   filterCommands,
   getSlashCommands,
-  executeCommand,
 } from "../lib/slash-commands";
 
 export function createSlashCommandSuggestion(
@@ -33,7 +33,13 @@ export function createSlashCommandSuggestion(
       let anchorElement: HTMLDivElement | null = null;
       let popoverElement: HTMLDivElement | null = null;
 
-      let editorView: { coordsAtPos: (pos: number) => { top: number; left: number; bottom: number } } | null = null;
+      let editorView: {
+        coordsAtPos: (pos: number) => {
+          top: number;
+          left: number;
+          bottom: number;
+        };
+      } | null = null;
       let decorationPos = 0;
       let rafId = 0;
 
@@ -71,7 +77,7 @@ export function createSlashCommandSuggestion(
           anchorElement = document.createElement("div");
           anchorElement.style.position = "fixed";
           anchorElement.style.pointerEvents = "none";
-          anchorElement.style.anchorName = "--slash-cursor";
+          anchorElement.style.setProperty("anchor-name", "--slash-cursor");
           document.body.appendChild(anchorElement);
 
           // Popover anchored to the cursor with flip fallback
@@ -83,9 +89,15 @@ export function createSlashCommandSuggestion(
           popoverElement.style.background = "none";
           popoverElement.style.overflow = "visible";
           popoverElement.style.inset = "unset";
-          popoverElement.style.positionAnchor = "--slash-cursor";
-          popoverElement.style.positionArea = "bottom span-right";
-          popoverElement.style.positionTryFallbacks = "flip-block, flip-inline, flip-block flip-inline";
+          popoverElement.style.setProperty("position-anchor", "--slash-cursor");
+          popoverElement.style.setProperty(
+            "position-area",
+            "bottom span-right",
+          );
+          popoverElement.style.setProperty(
+            "position-try-fallbacks",
+            "flip-block, flip-inline, flip-block flip-inline",
+          );
           popoverElement.appendChild(component.element);
           document.body.appendChild(popoverElement);
 

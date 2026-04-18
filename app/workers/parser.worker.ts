@@ -34,7 +34,10 @@ self.addEventListener("message", (event: MessageEvent<ParserRequest>) => {
       const transferBuffers = result.images.map(
         (image) => image.bytes.buffer as ArrayBuffer,
       );
-      self.postMessage({ action: "parse", result }, { transfer: transferBuffers });
+      self.postMessage(
+        { action: "parse", result },
+        { transfer: transferBuffers },
+      );
     } catch (error) {
       console.error("parse error:", error);
       self.postMessage({ action: "parse", error: String(error) });

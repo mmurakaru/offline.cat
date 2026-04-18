@@ -1,6 +1,6 @@
 import { Extension } from "@tiptap/react";
-import Suggestion from "@tiptap/suggestion";
 import type { SuggestionOptions } from "@tiptap/suggestion";
+import Suggestion from "@tiptap/suggestion";
 
 export interface SlashCommandOptions {
   suggestion: Omit<SuggestionOptions, "editor">;

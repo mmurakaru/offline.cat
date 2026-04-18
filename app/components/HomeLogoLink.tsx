@@ -1,12 +1,8 @@
 import { Link } from "react-router";
 import { cn } from "../lib/cn";
 import { localePath } from "../lib/localePath";
-import { OfflineIcon } from "./offline-icon";
-
-function isTauriRuntime(): boolean {
-  if (typeof window === "undefined") return false;
-  return (window as { isTauri?: boolean }).isTauri === true;
-}
+import { isTauriRuntime } from "../lib/runtime";
+import { OfflineIcon } from "./icons/offline-icon";
 
 export function HomeLogoLink({ className }: { className?: string }) {
   const iconClassName = "w-9 bg-black dark:bg-white";

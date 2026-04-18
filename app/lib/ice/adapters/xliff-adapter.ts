@@ -1,8 +1,5 @@
+import { extractSegments, reconstructXliff } from "../../parsers/xliff";
 import type { FormatParser, ParseResult } from "../parser-interface";
-import {
-  extractSegments,
-  reconstructXliff,
-} from "../../parsers/xliff";
 
 export const xliffParser: FormatParser = {
   extensions: ["xliff", "xlf"],

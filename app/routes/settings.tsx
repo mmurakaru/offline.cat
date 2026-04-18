@@ -9,13 +9,14 @@ import {
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useSearchParams } from "react-router";
 import { HomeLogoLink } from "../components/HomeLogoLink";
+import { XIcon } from "../components/icons/x-icon";
 import { LocaleSwitcher } from "../components/LocaleSwitcher";
-import { XIcon } from "../components/x-icon";
 import { useModelManager } from "../hooks/useModelManager";
 import { cn } from "../lib/cn";
 import i18n from "../lib/i18n";
 import { localePath } from "../lib/localePath";
 import { formatBytes } from "../lib/models";
+import { isTauriRuntime } from "../lib/runtime";
 
 export function meta() {
   return [
@@ -32,9 +33,7 @@ type OriginFilter = "all" | string;
 export default function Settings() {
   const { t } = useTranslation();
   const manager = useModelManager();
-  const isDesktop =
-    typeof window !== "undefined" &&
-    (window as { isTauri?: boolean }).isTauri === true;
+  const isDesktop = isTauriRuntime();
 
   const [search, setSearch] = useState("");
   const [originFilter, setOriginFilter] = useState<OriginFilter>("all");

@@ -1,9 +1,9 @@
-import type { EditorModel } from "../lib/ice/editor-model";
 import type { Segment } from "../hooks/useTranslation";
-import { SlideCanvas } from "./SlideCanvas";
+import type { EditorModel } from "../lib/ice/editor-model";
 import { DocumentCanvas } from "./DocumentCanvas";
 import { HtmlCanvas } from "./HtmlCanvas";
 import { SegmentListEditor } from "./SegmentListEditor";
+import { SlideCanvas } from "./SlideCanvas";
 
 export interface CanvasProps {
   segments: Segment[];
@@ -115,8 +115,7 @@ export function EditorCanvas({
                   image: currentLayout.background.image
                     ? {
                         mediaPath: currentLayout.background.image.mediaPath,
-                        contentType:
-                          currentLayout.background.image.contentType,
+                        contentType: currentLayout.background.image.contentType,
                       }
                     : undefined,
                 }

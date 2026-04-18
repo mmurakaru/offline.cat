@@ -1,3 +1,5 @@
+import { isTauriRuntime } from "./runtime";
+
 export interface LanguageOption {
   id: string;
   name: string;
@@ -138,11 +140,6 @@ const CHROME_LANGUAGE_PAIRS: readonly (readonly [string, string])[] = [
   ["el", "en"],
 ];
 
-function isTauriRuntime(): boolean {
-  if (typeof window === "undefined") return false;
-  return (window as { isTauri?: boolean }).isTauri === true;
-}
-
 function toSortedOptions(ids: Iterable<string>): LanguageOption[] {
   return [...ids]
     .map((id) => ({ id, name: LANGUAGES[id] ?? id }))
@@ -157,9 +154,7 @@ export function getSourceLanguages(): LanguageOption[] {
   return toSortedOptions(sources);
 }
 
-export function getTargetLanguages(
-  sourceLanguage: string,
-): LanguageOption[] {
+export function getTargetLanguages(sourceLanguage: string): LanguageOption[] {
   if (isTauriRuntime()) {
     // Local LLMs can translate any-to-any; exclude the source to avoid
     // identity pairs.

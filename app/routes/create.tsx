@@ -2,11 +2,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button, DropZone, FileTrigger } from "react-aria-components";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
-import { DocumentIcon } from "../components/document-icon";
 import { HomeLogoLink } from "../components/HomeLogoLink";
+import { DocumentIcon } from "../components/icons/document-icon";
+import { TrashIcon } from "../components/icons/trash-icon";
 import { LocaleSwitcher } from "../components/LocaleSwitcher";
 import { isInFlight, ModelPickerSelect } from "../components/ModelPickerSelect";
-import { TrashIcon } from "../components/trash-icon";
 import {
   AUTO_DOWNLOAD_DEFAULT_ID,
   useModelManager,
@@ -15,6 +15,7 @@ import { cn } from "../lib/cn";
 import { getDB } from "../lib/db";
 import i18n from "../lib/i18n";
 import { localePath } from "../lib/localePath";
+import { isTauriRuntime } from "../lib/runtime";
 
 const ACCEPTED_TYPES = [".pptx", ".docx", ".html", ".htm", ".xliff", ".xlf"];
 
@@ -32,9 +33,7 @@ export default function Create() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [isDragging, setIsDragging] = useState(false);
-  const isTauri =
-    typeof window !== "undefined" &&
-    (window as { isTauri?: boolean }).isTauri === true;
+  const isTauri = isTauriRuntime();
   const hasChromeTranslator =
     typeof window !== "undefined" && "Translator" in globalThis;
 

@@ -1393,9 +1393,7 @@ function resolveInheritedBackground(
   return undefined;
 }
 
-export function extractPptxLayoutFromFiles(
-  files: Record<string, Uint8Array>,
-): {
+export function extractPptxLayoutFromFiles(files: Record<string, Uint8Array>): {
   layouts: SlideLayout[];
   mediaPaths: string[];
 } {

@@ -81,7 +81,7 @@ pub fn translate(active: &ActiveModel, req: TranslateRequest<'_>) -> Result<Stri
 
     let n_prompt = tokens.len() as i32;
     let n_ctx = ctx.n_ctx() as i32;
-    let max_new = (n_ctx - n_prompt - 4).max(64).min(2048);
+    let max_new = (n_ctx - n_prompt - 4).clamp(64, 2048);
 
     let mut batch = LlamaBatch::new(512, 1);
     for (pos, token) in tokens.iter().enumerate() {
@@ -92,17 +92,13 @@ pub fn translate(active: &ActiveModel, req: TranslateRequest<'_>) -> Result<Stri
     }
     ctx.decode(&mut batch).context("failed to decode prompt")?;
 
-    let mut sampler = LlamaSampler::chain_simple([
-        LlamaSampler::temp(0.0),
-        LlamaSampler::greedy(),
-    ]);
+    let mut sampler = LlamaSampler::chain_simple([LlamaSampler::temp(0.0), LlamaSampler::greedy()]);
 
-    let mut cur_pos = n_prompt;
     let mut output = String::new();
     let eos = active.model.token_eos();
     let mut decoder = encoding_rs::UTF_8.new_decoder();
 
-    for _ in 0..max_new {
+    for cur_pos in n_prompt..(n_prompt + max_new) {
         if req.cancel.load(Ordering::Relaxed) {
             break;
         }
@@ -130,7 +126,6 @@ pub fn translate(active: &ActiveModel, req: TranslateRequest<'_>) -> Result<Stri
             .add(token, cur_pos, &[0], true)
             .context("failed to add sampled token to batch")?;
         ctx.decode(&mut batch).context("failed to decode step")?;
-        cur_pos += 1;
     }
 
     Ok(clean_output(&output))
@@ -181,9 +176,9 @@ fn format_prompt(template: ChatTemplate, src: &str, tgt: &str, text: &str) -> St
     let user = format!("Text:\n{text}\n\nTranslation:");
 
     match template {
-        ChatTemplate::Gemma => format!(
-            "<start_of_turn>user\n{system}\n\n{user}<end_of_turn>\n<start_of_turn>model\n"
-        ),
+        ChatTemplate::Gemma => {
+            format!("<start_of_turn>user\n{system}\n\n{user}<end_of_turn>\n<start_of_turn>model\n")
+        }
         ChatTemplate::Qwen => format!(
             "<|im_start|>system\n{system}<|im_end|>\n\
              <|im_start|>user\n{user}<|im_end|>\n\
@@ -194,12 +189,12 @@ fn format_prompt(template: ChatTemplate, src: &str, tgt: &str, text: &str) -> St
              <|start_header_id|>user<|end_header_id|>\n\n{user}<|eot_id|>\
              <|start_header_id|>assistant<|end_header_id|>\n\n"
         ),
-        ChatTemplate::Phi => format!(
-            "<|system|>\n{system}<|end|>\n<|user|>\n{user}<|end|>\n<|assistant|>\n"
-        ),
-        ChatTemplate::ChatGlm => format!(
-            "[gMASK]<sop><|system|>\n{system}<|user|>\n{user}<|assistant|>\n"
-        ),
+        ChatTemplate::Phi => {
+            format!("<|system|>\n{system}<|end|>\n<|user|>\n{user}<|end|>\n<|assistant|>\n")
+        }
+        ChatTemplate::ChatGlm => {
+            format!("[gMASK]<sop><|system|>\n{system}<|user|>\n{user}<|assistant|>\n")
+        }
     }
 }
 

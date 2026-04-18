@@ -42,9 +42,7 @@ describe("detectLanguage", () => {
       create: () =>
         Promise.resolve({
           detect: () =>
-            Promise.resolve([
-              { detectedLanguage: "en", confidence: 0.3 },
-            ]),
+            Promise.resolve([{ detectedLanguage: "en", confidence: 0.3 }]),
         }),
     });
 
@@ -61,9 +59,7 @@ describe("detectLanguage", () => {
       create: () =>
         Promise.resolve({
           detect: () =>
-            Promise.resolve([
-              { detectedLanguage: "sw", confidence: 0.99 },
-            ]),
+            Promise.resolve([{ detectedLanguage: "sw", confidence: 0.99 }]),
         }),
     });
 
