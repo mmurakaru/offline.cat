@@ -22,7 +22,7 @@ The **desktop build** embeds llama.cpp and ships a catalog of small open-weight 
 - [Writing Assistance APIs](https://github.com/webmachinelearning/writing-assistance-apis) - rewriting, summarization *(future)*
 - [Proofreader API](https://github.com/webmachinelearning/proofreader-api) - grammar and spelling checks *(future)*
 - [Prompt API](https://github.com/webmachinelearning/prompt-api) - free-form language model access *(future)*
-- [Web Speech API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Speech_API) - voice dictation *(future)*
+- [Web Speech API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Speech_API) - voice dictation
 
 ## Docs
 
@@ -83,7 +83,7 @@ Or connect the repo to the Cloudflare Pages dashboard with:
 git add package.json src-tauri/tauri.conf.json src-tauri/Cargo.toml
 git commit -m "release v<version>"
 git tag v<version>
-git push origin main --follow-tags
+git push origin v<version>
 ```
 
 The tag push triggers `.github/workflows/release.yml`, which builds and publishes signed desktop installers per platform plus `latest.json` for the auto-updater.
