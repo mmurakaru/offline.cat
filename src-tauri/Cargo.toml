@@ -1,6 +1,6 @@
 [package]
 name = "offline-cat"
-version = "0.1.0"
+version = "0.2.0"
 description = "offline.cat - local-first CAT tool"
 authors = ["mmurakaru"]
 edition = "2021"
