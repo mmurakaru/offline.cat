@@ -64,11 +64,11 @@ export default function Home() {
           {t("home.subtitle")}
         </p>
 
-        <div className="mt-8 flex items-center gap-3 flex-wrap justify-center">
+        <div className="mt-8 w-full max-w-xs sm:max-w-none flex flex-col sm:flex-row sm:items-center gap-3 sm:flex-wrap justify-center">
           {target && (
             <Link
               href={downloadUrlFor(target)}
-              className="flex items-center gap-1.5 whitespace-nowrap px-5 py-2.5 bg-grey-25 text-grey-1 rounded-lg hover:bg-grey-23 dark:bg-grey-1 dark:text-grey-25 dark:hover:bg-grey-3 transition-colors"
+              className="flex items-center justify-center gap-1.5 whitespace-nowrap px-5 py-2.5 bg-grey-25 text-grey-1 rounded-lg hover:bg-grey-23 dark:bg-grey-1 dark:text-grey-25 dark:hover:bg-grey-3 transition-colors"
             >
               {target.startsWith("macos") && <AppleIcon />}
               {labelFor(target)}
@@ -76,7 +76,7 @@ export default function Home() {
           )}
           <RouterLink
             to={localePath("/create")}
-            className="whitespace-nowrap px-5 py-2.5 border border-grey-4 dark:border-grey-14 text-grey-9 dark:text-grey-4 rounded-lg hover:bg-grey-2 dark:hover:bg-grey-15 transition-colors"
+            className="text-center whitespace-nowrap px-5 py-2.5 border border-grey-4 dark:border-grey-14 text-grey-9 dark:text-grey-4 rounded-lg hover:bg-grey-2 dark:hover:bg-grey-15 transition-colors"
           >
             {t("home.cta.tryInBrowser")}
           </RouterLink>
@@ -153,7 +153,7 @@ export default function Home() {
           <Link
             href="https://buy.stripe.com/cNi9AM8HN8si8De68C4Ni00"
             target="_blank"
-            className="mt-8 flex items-center gap-1.5 whitespace-nowrap px-6 py-3 bg-primary-5 text-white rounded-lg hover:bg-primary-6 transition-colors"
+            className="mt-8 w-full max-w-xs sm:w-auto sm:max-w-none flex items-center justify-center gap-1.5 whitespace-nowrap px-6 py-3 bg-primary-5 text-white rounded-lg hover:bg-primary-6 transition-colors"
           >
             <CoffeeIcon />
             {t("home.support.cta")}
