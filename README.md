@@ -1,4 +1,4 @@
-# Welcome to offline.cat!
+# <img src="src-tauri/icons/128x128.png" alt="" height="48" valign="middle" /> offline.cat
 
 Free, offline, privacy-first CAT tool. Runs entirely on your device — browser or desktop. No server, no account, no lock-in.
 
