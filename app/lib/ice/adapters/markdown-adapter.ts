@@ -27,7 +27,7 @@ export const markdownParser: FormatParser = {
         id: block.id,
         source: block.source,
       })),
-    ].sort((first, second) => compareSegmentIds(first.id, second.id));
+    ];
 
     return {
       segments,
@@ -41,7 +41,3 @@ export const markdownParser: FormatParser = {
     return new TextEncoder().encode(reconstructMarkdown(text, translations));
   },
 };
-
-function compareSegmentIds(first: string, second: string): number {
-  return Number(first.slice(3)) - Number(second.slice(3));
-}

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import type { Segment } from "../hooks/useTranslation";
 import type {
   MarkdownBlock,
@@ -25,14 +25,19 @@ function renderInline(text: string): React.ReactNode[] {
   let remaining = text;
   let key = 0;
 
+  function pushText(value: string) {
+    key += 1;
+    nodes.push(<Fragment key={key}>{value}</Fragment>);
+  }
+
   while (remaining.length > 0) {
     const match = remaining.match(INLINE_TOKEN);
     if (!match || match.index === undefined) {
-      nodes.push(remaining);
+      pushText(remaining);
       break;
     }
 
-    if (match.index > 0) nodes.push(remaining.slice(0, match.index));
+    if (match.index > 0) pushText(remaining.slice(0, match.index));
 
     const token = match[0];
     key += 1;
@@ -43,11 +48,13 @@ function renderInline(text: string): React.ReactNode[] {
     } else if (token.startsWith("*")) {
       nodes.push(<em key={key}>{renderInline(token.slice(1, -1))}</em>);
     } else {
+      // Links render as non-navigable text: the preview is an editor surface,
+      // and this keeps untrusted hrefs (e.g. javascript:) out of the app origin.
       const link = token.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
       nodes.push(
-        <a key={key} href={link?.[2]}>
+        <span key={key} className="mdc-link">
           {link?.[1]}
-        </a>,
+        </span>,
       );
     }
 
@@ -71,6 +78,7 @@ export function MarkdownCanvas({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingValue, setEditingValue] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
+  const lastSyncedValueRef = useRef("");
 
   const segmentMap = useMemo(
     () => new Map(segments.map((segment) => [segment.id, segment])),
@@ -96,6 +104,18 @@ export function MarkdownCanvas({
     [editingId],
   );
 
+  useEffect(
+    function syncExternalTarget() {
+      if (editingId === null) return;
+      const target = segmentMap.get(editingId)?.target ?? "";
+      if (target !== lastSyncedValueRef.current) {
+        lastSyncedValueRef.current = target;
+        setEditingValue(target);
+      }
+    },
+    [editingId, segmentMap],
+  );
+
   function displayValue(segmentId: string): string {
     const segment = segmentMap.get(segmentId);
     return segment?.target?.length ? segment.target : (segment?.source ?? "");
@@ -108,6 +128,7 @@ export function MarkdownCanvas({
 
   function beginEditing(segmentId: string) {
     const segment = segmentMap.get(segmentId);
+    lastSyncedValueRef.current = segment?.target ?? "";
     setEditingId(segmentId);
     setEditingValue(segment?.target ?? "");
     onSegmentFocus(segmentId);
@@ -124,6 +145,7 @@ export function MarkdownCanvas({
   }
 
   function handleChange(segmentId: string, value: string) {
+    lastSyncedValueRef.current = value;
     setEditingValue(value);
     onTargetChange(segmentId, value);
   }
@@ -143,8 +165,8 @@ export function MarkdownCanvas({
       moveEditing(segmentId, -1);
     } else if (event.key === "Enter") {
       event.preventDefault();
-      if ((event.metaKey || event.ctrlKey) && canTranslate) {
-        onTranslateSegment(segmentId);
+      if (event.metaKey || event.ctrlKey) {
+        if (canTranslate) onTranslateSegment(segmentId);
         return;
       }
       onConfirm(segmentId, editingValue);
@@ -152,17 +174,18 @@ export function MarkdownCanvas({
     }
   }
 
-  function relativeLabel(segmentId: string): string {
-    if (editingId === null) return "";
-    const activeIndex = blocks.findIndex((block) => block.id === editingId);
-    if (activeIndex === -1) return "";
-    const index = blocks.findIndex((block) => block.id === segmentId);
-    if (index === activeIndex) return String(index + 1);
-    return String(Math.abs(index - activeIndex));
+  const editingBlockIndex =
+    editingId === null
+      ? -1
+      : blocks.findIndex((block) => block.id === editingId);
+
+  function gutterLabel(index: number): string {
+    if (editingBlockIndex === -1) return "";
+    if (index === editingBlockIndex) return String(index + 1);
+    return String(Math.abs(index - editingBlockIndex));
   }
 
-  const bodyEditing =
-    editingId !== null && blocks.some((block) => block.id === editingId);
+  const bodyEditing = editingBlockIndex !== -1;
 
   function renderInput(segmentId: string) {
     return (
@@ -183,8 +206,11 @@ export function MarkdownCanvas({
   function renderBlockContent(block: MarkdownBlock) {
     const content = renderInline(displayValue(block.id));
     if (block.kind === "heading") {
-      const Tag = `h${block.level ?? 1}` as keyof React.JSX.IntrinsicElements;
-      return <Tag>{content}</Tag>;
+      return (
+        <span className={`mdc-heading mdc-h${block.level ?? 1}`}>
+          {content}
+        </span>
+      );
     }
     if (block.kind === "listItem") {
       return (
@@ -237,14 +263,14 @@ export function MarkdownCanvas({
       )}
 
       <div className="mdc-body" data-editing={bodyEditing}>
-        {blocks.map((block) => (
+        {blocks.map((block, index) => (
           <div
             key={block.id}
             className={
               block.id === activeSegmentId ? "mdc-line mdc-active" : "mdc-line"
             }
           >
-            <span className="mdc-gutter">{relativeLabel(block.id)}</span>
+            <span className="mdc-gutter">{gutterLabel(index)}</span>
             <div className="mdc-content">
               {editingId === block.id ? (
                 renderInput(block.id)

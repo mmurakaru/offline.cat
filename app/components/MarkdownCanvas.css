@@ -116,14 +116,20 @@
   caret-color: var(--mdc-accent);
 }
 
-.mdc-cell h1,
-.mdc-cell h2,
-.mdc-cell h3,
-.mdc-cell h4,
-.mdc-cell h5,
-.mdc-cell h6 {
-  display: inline;
+.mdc-heading {
   font-weight: 700;
+}
+
+.mdc-h1 {
+  font-size: 1.4em;
+}
+
+.mdc-h2 {
+  font-size: 1.2em;
+}
+
+.mdc-h3 {
+  font-size: 1.05em;
 }
 
 .mdc-cell code {
@@ -133,7 +139,7 @@
   font-size: 0.92em;
 }
 
-.mdc-cell a {
+.mdc-link {
   color: var(--mdc-accent);
   text-decoration: underline;
   text-underline-offset: 2px;
