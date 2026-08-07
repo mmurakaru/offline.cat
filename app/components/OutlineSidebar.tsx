@@ -234,7 +234,7 @@ function buildGroups(
     return pages;
   }
 
-  // HTML, XLIFF, etc: flat list, no grouping
+  // Markdown, XLIFF, etc: flat list, no grouping
   return [{ label: null, segments }];
 }
 
