@@ -317,8 +317,8 @@ export default function Translate() {
       const mimeTypes: Record<string, string> = {
         pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
         docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        html: "text/html",
-        htm: "text/html",
+        md: "text/markdown",
+        markdown: "text/markdown",
         xliff: "application/xml",
         xlf: "application/xml",
       };

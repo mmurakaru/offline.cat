@@ -1,12 +1,12 @@
 import type { FormatParser } from "../parser-interface";
 import { docxParser } from "./docx-adapter";
-import { htmlParser } from "./html-adapter";
+import { markdownParser } from "./markdown-adapter";
 import { pptxParser } from "./pptx-adapter";
 import { xliffParser } from "./xliff-adapter";
 
 const parsers: FormatParser[] = [
   xliffParser,
-  htmlParser,
+  markdownParser,
   docxParser,
   pptxParser,
 ];

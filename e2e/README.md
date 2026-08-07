@@ -49,7 +49,8 @@ npx playwright test --headed
 | File | Format | Content |
 |------|--------|---------|
 | `sample.xliff` | XLIFF 1.2 | 3 trans-units |
-| `sample.html` | HTML | Page with 3 text paragraphs |
+| `sample.md` | Markdown | Heading and 2 paragraphs |
+| `sample-skill.md` | Markdown | SKILL.md with YAML frontmatter |
 | `sample.docx` | DOCX | 2 paragraphs with page dimensions |
 | `sample.pptx` | PPTX | 2 slides with title and body text |
 
@@ -62,4 +63,4 @@ npx tsx e2e/fixtures/generate-fixtures.ts
 ## Test structure
 
 - `upload-and-parse.spec.ts` - Upload each format, verify segments appear and correct badges render
-- `canvas-modes.spec.ts` - Verify the correct editor canvas renders per format (slide canvas for PPTX, document canvas for DOCX, iframe preview for HTML, segment list for XLIFF)
+- `canvas-modes.spec.ts` - Verify the correct editor canvas renders per format (slide canvas for PPTX, document canvas for DOCX, markdown canvas for Markdown, segment list for XLIFF)

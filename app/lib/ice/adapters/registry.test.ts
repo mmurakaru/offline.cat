@@ -14,16 +14,16 @@ describe("getParser", () => {
     expect(parser?.extensions).toContain("xlf");
   });
 
-  it("returns html parser for html extension", () => {
-    const parser = getParser("html");
+  it("returns markdown parser for md extension", () => {
+    const parser = getParser("md");
     expect(parser).toBeDefined();
-    expect(parser?.extensions).toContain("html");
+    expect(parser?.extensions).toContain("md");
   });
 
-  it("returns html parser for htm extension", () => {
-    const parser = getParser("htm");
+  it("returns markdown parser for markdown extension", () => {
+    const parser = getParser("markdown");
     expect(parser).toBeDefined();
-    expect(parser?.extensions).toContain("htm");
+    expect(parser?.extensions).toContain("markdown");
   });
 
   it("returns docx parser for docx extension", () => {
@@ -47,6 +47,6 @@ describe("getParser", () => {
   it("is case insensitive", () => {
     expect(getParser("PPTX")).toBeDefined();
     expect(getParser("Docx")).toBeDefined();
-    expect(getParser("HTML")).toBeDefined();
+    expect(getParser("MD")).toBeDefined();
   });
 });

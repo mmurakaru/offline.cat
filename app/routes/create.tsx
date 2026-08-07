@@ -17,7 +17,7 @@ import i18n from "../lib/i18n";
 import { localePath } from "../lib/localePath";
 import { isTauriRuntime } from "../lib/runtime";
 
-const ACCEPTED_TYPES = [".pptx", ".docx", ".html", ".htm", ".xliff", ".xlf"];
+const ACCEPTED_TYPES = [".pptx", ".docx", ".md", ".markdown", ".xliff", ".xlf"];
 
 export function meta() {
   return [

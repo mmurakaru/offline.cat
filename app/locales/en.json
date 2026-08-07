@@ -37,7 +37,7 @@
   "create": {
     "dropzone": {
       "label": "Drop a file or click to browse",
-      "formats": "PPTX, DOCX, HTML, XLIFF"
+      "formats": "PPTX, DOCX, MD, XLIFF"
     },
     "offlinePrefix": "For offline usage,",
     "offlineLink": "download required language packs",

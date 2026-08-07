@@ -111,10 +111,10 @@ test.describe("Translation flow", () => {
     await expect(page.getByText("Empezar es facil").first()).toBeVisible();
   });
 
-  test("HTML: select languages, translate, verify results", async ({
+  test("Markdown: select languages, translate, verify results", async ({
     page,
   }) => {
-    await setupAndUpload(page, "sample.html");
+    await setupAndUpload(page, "sample.md");
 
     await expect(
       page.getByRole("combobox", { name: "Source language" }),
