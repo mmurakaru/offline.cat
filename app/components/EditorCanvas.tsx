@@ -1,7 +1,7 @@
 import type { Segment } from "../hooks/useTranslation";
 import type { EditorModel } from "../lib/ice/editor-model";
 import { DocumentCanvas } from "./DocumentCanvas";
-import { HtmlCanvas } from "./HtmlCanvas";
+import { MarkdownCanvas } from "./MarkdownCanvas";
 import { SegmentListEditor } from "./SegmentListEditor";
 import { SlideCanvas } from "./SlideCanvas";
 
@@ -178,8 +178,14 @@ export function EditorCanvas({
           {...sharedProps}
         />
       );
-    case "html-preview":
-      return <HtmlCanvas rawHtml={model.rawHtml} {...sharedProps} />;
+    case "markdown":
+      return (
+        <MarkdownCanvas
+          frontmatter={model.frontmatter}
+          blocks={model.blocks}
+          {...sharedProps}
+        />
+      );
     case "segment-list":
       return <SegmentListEditor {...sharedProps} />;
   }

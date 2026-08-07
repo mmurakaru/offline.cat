@@ -22,10 +22,10 @@ async function uploadFile(
 }
 
 test.describe("Upload and parse", () => {
-  test("HTML: uploads and shows segments", async ({ page }) => {
-    await uploadFile(page, "sample.html");
+  test("Markdown: uploads and shows segments", async ({ page }) => {
+    await uploadFile(page, "sample.md");
 
-    // Should show segment text from HTML
+    // Should show segment text from Markdown
     await expect(page.getByText("Welcome to our website").first()).toBeVisible({
       timeout: 10000,
     });

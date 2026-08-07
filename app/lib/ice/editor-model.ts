@@ -4,7 +4,7 @@
 
 // ---- Editor modes ----
 
-export type EditorMode = "slide" | "page" | "html-preview" | "segment-list";
+export type EditorMode = "slide" | "page" | "markdown" | "segment-list";
 
 // ---- Shared primitives ----
 
@@ -126,11 +126,25 @@ export interface PageEditorModel {
   blocks: DocumentBlock[];
 }
 
-// ---- HTML preview mode ----
+// ---- Markdown mode (MD, future MDX) ----
 
-export interface HtmlPreviewEditorModel {
-  mode: "html-preview";
-  rawHtml: string;
+export type MarkdownBlockKind = "heading" | "paragraph" | "listItem";
+
+export interface MarkdownFrontmatterField {
+  id: string;
+  key: string;
+}
+
+export interface MarkdownBlock {
+  id: string;
+  kind: MarkdownBlockKind;
+  level?: number;
+}
+
+export interface MarkdownEditorModel {
+  mode: "markdown";
+  frontmatter: MarkdownFrontmatterField[];
+  blocks: MarkdownBlock[];
 }
 
 // ---- Segment list mode (XLIFF, fallback) ----
@@ -144,5 +158,5 @@ export interface SegmentListEditorModel {
 export type EditorModel =
   | SlideEditorModel
   | PageEditorModel
-  | HtmlPreviewEditorModel
+  | MarkdownEditorModel
   | SegmentListEditorModel;

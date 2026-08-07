@@ -43,15 +43,14 @@ test.describe("Canvas modes", () => {
     ).toBeVisible();
   });
 
-  test("HTML renders preview with HTML badge", async ({ page }) => {
-    await uploadFile(page, "sample.html");
+  test("Markdown renders preview with MD badge", async ({ page }) => {
+    await uploadFile(page, "sample.md");
 
-    // HTML badge - use exact match to avoid matching DOCTYPE content
-    await expect(page.getByText("HTML", { exact: true })).toBeVisible({
+    await expect(page.getByText("MD", { exact: true })).toBeVisible({
       timeout: 10000,
     });
 
-    // HTML content should appear
+    // Markdown content should appear
     await expect(
       page.getByText("Welcome to our website").first(),
     ).toBeVisible();

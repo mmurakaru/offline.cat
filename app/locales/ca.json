@@ -37,7 +37,7 @@
   "create": {
     "dropzone": {
       "label": "Deixa anar un fitxer o fes clic per explorar",
-      "formats": "PPTX, DOCX, HTML, XLIFF"
+      "formats": "PPTX, DOCX, Markdown, XLIFF"
     },
     "offlinePrefix": "Per a l'ús fora de línia,",
     "offlineLink": "descarrega els paquets d'idiomes necessaris",

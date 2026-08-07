@@ -1,0 +1,149 @@
+.mdc-root {
+  --mdc-border: #e1e3ea;
+  --mdc-border-soft: #ebedf3;
+  --mdc-key-bg: #f2f3f7;
+  --mdc-muted: #9497a8;
+  --mdc-accent: #6366f1;
+  --mdc-accent-soft: rgba(99, 102, 241, 0.08);
+  --mdc-gutter: #b7bacb;
+  font-family:
+    ui-monospace, "SF Mono", "Cascadia Code", "JetBrains Mono", Consolas,
+    monospace;
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.mdc-frontmatter {
+  padding: 20px 24px 4px;
+}
+
+.mdc-fm-table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 13.5px;
+  border: 1px solid var(--mdc-border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.mdc-fm-table td {
+  border: 1px solid var(--mdc-border);
+  padding: 7px 12px;
+  vertical-align: top;
+}
+
+.mdc-fm-key {
+  font-weight: 600;
+  background: var(--mdc-key-bg);
+  white-space: nowrap;
+  width: 1%;
+}
+
+.mdc-fm-value {
+  width: 100%;
+}
+
+.mdc-fm-value.mdc-active {
+  background: var(--mdc-accent-soft);
+}
+
+.mdc-body {
+  padding: 12px 24px 32px;
+}
+
+.mdc-line {
+  display: flex;
+  align-items: flex-start;
+  padding: 1px 0;
+}
+
+.mdc-line.mdc-active {
+  background: var(--mdc-accent-soft);
+}
+
+.mdc-gutter {
+  flex: 0 0 34px;
+  text-align: right;
+  padding-right: 12px;
+  color: var(--mdc-gutter);
+  font-size: 12.5px;
+  user-select: none;
+  visibility: hidden;
+}
+
+.mdc-body[data-editing="true"] .mdc-gutter {
+  visibility: visible;
+}
+
+.mdc-line.mdc-active .mdc-gutter {
+  color: var(--mdc-accent);
+  font-weight: 600;
+}
+
+.mdc-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.mdc-cell {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  cursor: text;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.mdc-cell.mdc-placeholder {
+  color: var(--mdc-muted);
+}
+
+.mdc-input {
+  display: block;
+  width: 100%;
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  outline: none;
+  padding: 0;
+  caret-color: var(--mdc-accent);
+}
+
+.mdc-cell h1,
+.mdc-cell h2,
+.mdc-cell h3,
+.mdc-cell h4,
+.mdc-cell h5,
+.mdc-cell h6 {
+  display: inline;
+  font-weight: 700;
+}
+
+.mdc-cell code {
+  background: var(--mdc-border-soft);
+  border-radius: 4px;
+  padding: 0 4px;
+  font-size: 0.92em;
+}
+
+.mdc-cell a {
+  color: var(--mdc-accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.mdc-list-item {
+  display: inline;
+}
+
+.mdc-bullet {
+  color: var(--mdc-muted);
+  margin-right: 6px;
+}
