@@ -93,7 +93,6 @@ pub fn translate(active: &ActiveModel, req: TranslateRequest<'_>) -> Result<Stri
     let mut sampler = LlamaSampler::chain_simple([LlamaSampler::temp(0.0), LlamaSampler::greedy()]);
 
     let mut output = String::new();
-    let eos = vocab.eos();
     let mut decoder = encoding_rs::UTF_8.new_decoder();
 
     for cur_pos in n_prompt..(n_prompt + max_new) {
@@ -104,7 +103,7 @@ pub fn translate(active: &ActiveModel, req: TranslateRequest<'_>) -> Result<Stri
         let token = sampler.sample(&ctx, -1);
         sampler.accept(token);
 
-        if token == eos {
+        if vocab.is_eog(token) {
             break;
         }
 
@@ -173,16 +172,18 @@ fn format_prompt(template: ChatTemplate, src: &str, tgt: &str, text: &str) -> St
     let user = format!("Text:\n{text}\n\nTranslation:");
 
     match template {
-        ChatTemplate::Gemma => {
-            format!("<start_of_turn>user\n{system}\n\n{user}<end_of_turn>\n<start_of_turn>model\n")
-        }
+        ChatTemplate::Gemma => format!(
+            "<|turn>system\n{system}<turn|>\n\
+             <|turn>user\n{user}<turn|>\n\
+             <|turn>model\n"
+        ),
         ChatTemplate::Qwen => format!(
             "<|im_start|>system\n{system}<|im_end|>\n\
              <|im_start|>user\n{user}<|im_end|>\n\
-             <|im_start|>assistant\n"
+             <|im_start|>assistant\n<think>\n\n</think>\n\n"
         ),
         ChatTemplate::Llama => format!(
-            "<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\n{system}<|eot_id|>\
+            "<|start_header_id|>system<|end_header_id|>\n\n{system}<|eot_id|>\
              <|start_header_id|>user<|end_header_id|>\n\n{user}<|eot_id|>\
              <|start_header_id|>assistant<|end_header_id|>\n\n"
         ),
@@ -270,10 +271,11 @@ mod tests {
     }
 
     #[test]
-    fn format_prompt_gemma_wraps_in_start_of_turn_tags() {
+    fn format_prompt_gemma_uses_gemma4_turn_tags() {
         let prompt = format_prompt(ChatTemplate::Gemma, "en", "es", "Hello");
-        assert!(prompt.starts_with("<start_of_turn>user\n"));
-        assert!(prompt.ends_with("<start_of_turn>model\n"));
+        assert!(prompt.starts_with("<|turn>system\n"));
+        assert!(prompt.contains("<turn|>\n<|turn>user\n"));
+        assert!(prompt.ends_with("<turn|>\n<|turn>model\n"));
         assert!(prompt.contains("from en to es"));
         assert!(prompt.contains("Hello"));
     }
@@ -283,14 +285,14 @@ mod tests {
         let prompt = format_prompt(ChatTemplate::Qwen, "en", "ja", "Hello");
         assert!(prompt.contains("<|im_start|>system\n"));
         assert!(prompt.contains("<|im_start|>user\n"));
-        assert!(prompt.ends_with("<|im_start|>assistant\n"));
+        assert!(prompt.ends_with("<|im_start|>assistant\n<think>\n\n</think>\n\n"));
         assert!(prompt.contains("from en to ja"));
     }
 
     #[test]
-    fn format_prompt_llama_uses_header_ids_and_begin_of_text() {
+    fn format_prompt_llama_uses_header_ids_and_leaves_bos_to_the_tokenizer() {
         let prompt = format_prompt(ChatTemplate::Llama, "de", "en", "Hallo");
-        assert!(prompt.starts_with("<|begin_of_text|>"));
+        assert!(prompt.starts_with("<|start_header_id|>system"));
         assert!(prompt.contains("<|start_header_id|>system<|end_header_id|>"));
         assert!(prompt.ends_with("<|start_header_id|>assistant<|end_header_id|>\n\n"));
         assert!(prompt.contains("Hallo"));
