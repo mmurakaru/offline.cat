@@ -46,6 +46,7 @@ pub struct Downloader {
 
 impl Downloader {
     pub fn new() -> Self {
+        let _ = rustls::crypto::ring::default_provider().install_default();
         let client = reqwest::Client::builder()
             .user_agent("offline.cat/0.1")
             .connect_timeout(std::time::Duration::from_secs(30))
