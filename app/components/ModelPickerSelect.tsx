@@ -15,7 +15,7 @@ import { ChevronDownIcon } from "./icons/chevron-down-icon";
 import { SettingsIcon } from "./icons/settings-icon";
 import { XIcon } from "./icons/x-icon";
 
-const FEATURED_IDS = ["gemma-4-e4b", "qwen-3.5-4b", "llama-3.3-8b"] as const;
+const FEATURED_IDS = ["gemma-4-e4b", "qwen-3.5-4b", "llama-3.1-8b"] as const;
 
 const POPOVER_CLASSES = cn(
   "min-w-[320px] rounded-lg overflow-hidden outline-none",
