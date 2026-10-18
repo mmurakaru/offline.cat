@@ -1,5 +1,5 @@
 // Records the homepage demo video (~10s loop).
-// Run:  npx playwright test capture-demo --reporter=list
+// Run:  CAPTURE_DEMO=1 npx playwright test capture-demo --reporter=list
 //
 // Not part of the regular test suite - run manually when you need a fresh video.
 
