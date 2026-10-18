@@ -1,8 +1,3 @@
-// Records the homepage demo video (~10s loop).
-// Run:  CAPTURE_DEMO=1 npx playwright test capture-demo --reporter=list
-//
-// Not part of the regular test suite - run manually when you need a fresh video.
-
 import { execSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";

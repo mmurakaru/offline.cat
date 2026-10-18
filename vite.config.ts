@@ -39,10 +39,7 @@ export default defineConfig({
   resolve: {
     tsconfigPaths: true,
     alias: [
-      // remark-parse depends on decode-named-character-reference, whose
-      // "browser" export uses `document`. Markdown parsing runs in a Web
-      // Worker where `document` does not exist, so the whole parser worker
-      // crashed on load. Force the DOM-free build, which behaves the same.
+      // The package's "browser" build calls document.createElement, which does not exist in the parser Web Worker.
       {
         find: /^decode-named-character-reference$/,
         replacement: fileURLToPath(
@@ -58,31 +55,7 @@ export default defineConfig({
     format: "es",
   },
   optimizeDeps: {
-    // Pre-bundle deps that Vite otherwise discovers late (route modules and
-    // the parser worker), which triggers full page reloads in dev and made
-    // the first e2e tests on a cold cache flaky.
-    include: [
-      "i18next",
-      "react-i18next",
-      "@tauri-apps/api/core",
-      "@tauri-apps/plugin-process",
-      "@tauri-apps/plugin-updater",
-      "clsx",
-      "react-aria-components",
-      "tailwind-merge",
-      "@tanstack/react-hotkeys",
-      "@tiptap/extension-placeholder",
-      "@tiptap/react",
-      "@tiptap/starter-kit",
-      "@tiptap/suggestion",
-      "fast-xml-parser",
-      "fflate",
-      "remark-frontmatter",
-      "remark-gfm",
-      "remark-parse",
-      "unified",
-      "unist-util-visit",
-    ],
+    entries: ["app/**/*.{ts,tsx}", "!app/**/*.test.{ts,tsx}"],
     exclude: ["@sqlite.org/sqlite-wasm"],
   },
 });
