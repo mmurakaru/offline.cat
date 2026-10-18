@@ -334,4 +334,48 @@ mod tests {
             );
         }
     }
+
+    #[test]
+    #[ignore = "needs downloaded GGUF files in OFFLINECAT_MODELS_DIR"]
+    fn installed_catalog_models_translate() {
+        let dir = std::path::PathBuf::from(
+            std::env::var("OFFLINECAT_MODELS_DIR").expect("set OFFLINECAT_MODELS_DIR"),
+        );
+        let installed: Vec<_> = crate::catalog::CATALOG
+            .iter()
+            .filter(|e| dir.join(format!("{}.gguf", e.id)).exists())
+            .collect();
+        assert!(
+            !installed.is_empty(),
+            "no catalog model found in {}",
+            dir.display()
+        );
+        for entry in installed {
+            let path = dir.join(format!("{}.gguf", entry.id));
+            let active = ActiveModel::load(entry.id.to_string(), &path, entry.chat_template)
+                .expect("model loads");
+            let out = translate(
+                &active,
+                TranslateRequest {
+                    source_text: "The cat is sleeping on the warm windowsill.",
+                    source_lang: "en",
+                    target_lang: "es",
+                    cancel: Arc::new(AtomicBool::new(false)),
+                },
+            )
+            .expect("translation runs");
+            println!("{}: {out}", entry.id);
+            let lower = out.to_lowercase();
+            assert!(
+                lower.contains("gato"),
+                "{} did not translate to Spanish: {out}",
+                entry.id
+            );
+            assert!(
+                !out.contains("<|") && !out.contains("|>"),
+                "{} leaked template tokens: {out}",
+                entry.id
+            );
+        }
+    }
 }

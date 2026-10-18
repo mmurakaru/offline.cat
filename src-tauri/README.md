@@ -81,6 +81,13 @@ cd src-tauri && cargo test --lib --no-default-features -- download_resumes_from_
 cd src-tauri && cargo test --lib --no-default-features -- --nocapture
 ```
 
+`installed_catalog_models_translate` is ignored by default because it needs real model files. It loads every catalog model saved as `<id>.gguf` in `OFFLINECAT_MODELS_DIR` and checks that each one translates an English sentence into Spanish.
+
+```bash
+cd src-tauri && OFFLINECAT_MODELS_DIR=~/.local/share/cat.offline.app/models \
+  cargo test --lib --no-default-features installed_catalog_models_translate -- --ignored --nocapture
+```
+
 `--no-default-features` keeps the suite fast by skipping the Metal/CUDA/Vulkan GPU backends - none of the unit or integration tests need them. Frontend tests (vitest) live separately; see the top-level `package.json` scripts.
 
 ## Layout
