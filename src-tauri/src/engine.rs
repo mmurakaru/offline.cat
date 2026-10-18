@@ -8,7 +8,7 @@ use llama_cpp_2::context::params::LlamaContextParams;
 use llama_cpp_2::llama_backend::LlamaBackend;
 use llama_cpp_2::llama_batch::LlamaBatch;
 use llama_cpp_2::model::params::LlamaModelParams;
-use llama_cpp_2::model::{AddBos, LlamaModel};
+use llama_cpp_2::model::LlamaModel;
 use llama_cpp_2::sampling::LlamaSampler;
 
 use crate::catalog::ChatTemplate;
@@ -74,10 +74,15 @@ pub fn translate(active: &ActiveModel, req: TranslateRequest<'_>) -> Result<Stri
         req.source_text,
     );
 
-    let tokens = active
-        .model
-        .str_to_token(&prompt, AddBos::Always)
-        .context("failed to tokenize prompt")?;
+    // Same semantics as the removed `str_to_token(.., AddBos::Always)`:
+    // add BOS/special tokens and parse special tokens in the chat template.
+    // The old API rejected interior NUL bytes, so keep that behavior.
+    anyhow::ensure!(
+        !prompt.contains('\0'),
+        "failed to tokenize prompt: prompt contains a NUL byte"
+    );
+    let vocab = active.model.vocab();
+    let tokens = vocab.tokenize(prompt.as_bytes(), true, true);
 
     let n_prompt = tokens.len() as i32;
     let n_ctx = ctx.n_ctx() as i32;
@@ -95,7 +100,7 @@ pub fn translate(active: &ActiveModel, req: TranslateRequest<'_>) -> Result<Stri
     let mut sampler = LlamaSampler::chain_simple([LlamaSampler::temp(0.0), LlamaSampler::greedy()]);
 
     let mut output = String::new();
-    let eos = active.model.token_eos();
+    let eos = vocab.eos();
     let mut decoder = encoding_rs::UTF_8.new_decoder();
 
     for cur_pos in n_prompt..(n_prompt + max_new) {
@@ -110,12 +115,11 @@ pub fn translate(active: &ActiveModel, req: TranslateRequest<'_>) -> Result<Stri
             break;
         }
 
-        if let Ok(piece) = active
-            .model
-            .token_to_piece(token, &mut decoder, false, None)
-        {
-            output.push_str(&piece);
+        let bytes = vocab.token_to_piece(token, false, None);
+        if let Some(max_len) = decoder.max_utf8_buffer_length(bytes.len()) {
+            output.reserve(max_len);
         }
+        let _ = decoder.decode_to_string(&bytes, &mut output, false);
 
         if has_stop_marker(&output) {
             break;
