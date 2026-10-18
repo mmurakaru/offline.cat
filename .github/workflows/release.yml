@@ -88,10 +88,10 @@ jobs:
           releaseBody: |
             Download the matching asset for your platform below.
 
-            - macOS (Apple Silicon): `offline.cat_${{ github.ref_name }}_aarch64.dmg`
-            - macOS (Intel): `offline.cat_${{ github.ref_name }}_x64.dmg`
-            - Windows: `offline.cat_${{ github.ref_name }}_x64_en-US.msi`
-            - Linux: `offline.cat_${{ github.ref_name }}_amd64.AppImage`
+            - macOS (Apple Silicon): `offline.cat_aarch64.dmg`
+            - macOS (Intel): `offline.cat_x64.dmg`
+            - Windows: `offline.cat_x64_en-US.msi`
+            - Linux: `offline.cat_amd64.AppImage`
           releaseDraft: false
           prerelease: false
           includeUpdaterJson: true
