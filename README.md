@@ -13,7 +13,7 @@ offline.cat runs translation on your machine, not a cloud service. This means:
 
 The **web build** uses Chrome's built-in Translator API. Requires Chrome 138+ with [on-device language packs](chrome://on-device-translation-internals/) installed.
 
-The **desktop build** embeds llama.cpp and ships a catalog of small open-weight models ([Gemma 4](https://huggingface.co/unsloth/gemma-4-E4B-it-GGUF), [Qwen 3.5](https://huggingface.co/unsloth/Qwen3.5-4B-GGUF), [Phi-4-mini](https://huggingface.co/unsloth/Phi-4-mini-instruct-GGUF), and more). Download for macOS / Windows / Linux from [Releases](https://github.com/mmurakaru/offline.cat/releases/latest).
+The **desktop build** embeds llama.cpp and ships a catalog of small open-weight models ([Gemma 4](https://huggingface.co/google/gemma-4-E4B-it-qat-q4_0-gguf), [Qwen 3.5](https://huggingface.co/unsloth/Qwen3.5-4B-GGUF), [Phi-4-mini](https://huggingface.co/unsloth/Phi-4-mini-instruct-GGUF), and more). Download for macOS / Windows / Linux from [Releases](https://github.com/mmurakaru/offline.cat/releases/latest).
 
 ## Built-in APIs (web)
 
