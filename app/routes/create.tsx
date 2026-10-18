@@ -148,29 +148,29 @@ export default function Create() {
           <DocumentIcon />
         </p>
 
-        <FileTrigger
-          onSelect={supported ? onSelect : undefined}
-          acceptedFileTypes={ACCEPTED_TYPES}
+        <DropZone
+          onDropEnter={supported ? () => setIsDragging(true) : undefined}
+          onDropExit={supported ? () => setIsDragging(false) : undefined}
+          onDrop={supported ? onDrop : undefined}
+          className={cn(
+            "w-full border-2 border-dashed rounded-xl text-center transition-colors",
+            !supported
+              ? "border-grey-4 dark:border-ui-divider opacity-50 cursor-not-allowed"
+              : isDragging
+                ? "border-primary-5 bg-primary-5/10 dark:bg-primary-10 cursor-pointer"
+                : "border-grey-4 dark:border-ui-divider hover:border-grey-5 dark:hover:border-grey-10 cursor-pointer",
+          )}
         >
-          <Button
-            className={cn(
-              "w-full outline-none",
-              supported ? "cursor-pointer" : "cursor-not-allowed",
-            )}
-            isDisabled={!supported}
+          <FileTrigger
+            onSelect={supported ? onSelect : undefined}
+            acceptedFileTypes={ACCEPTED_TYPES}
           >
-            <DropZone
-              onDropEnter={supported ? () => setIsDragging(true) : undefined}
-              onDropExit={supported ? () => setIsDragging(false) : undefined}
-              onDrop={supported ? onDrop : undefined}
+            <Button
               className={cn(
-                "w-full border-2 border-dashed rounded-xl p-12 text-center transition-colors",
-                !supported
-                  ? "border-grey-4 dark:border-ui-divider opacity-50 cursor-not-allowed"
-                  : isDragging
-                    ? "border-primary-5 bg-primary-5/10 dark:bg-primary-10 cursor-pointer"
-                    : "border-grey-4 dark:border-ui-divider hover:border-grey-5 dark:hover:border-grey-10 cursor-pointer",
+                "w-full p-12 outline-none",
+                supported ? "cursor-pointer" : "cursor-not-allowed",
               )}
+              isDisabled={!supported}
             >
               <p className="text-sm text-grey-6">
                 {t("create.dropzone.label")}
@@ -178,9 +178,9 @@ export default function Create() {
               <p className="text-xs text-grey-6 mt-2">
                 {t("create.dropzone.formats")}
               </p>
-            </DropZone>
-          </Button>
-        </FileTrigger>
+            </Button>
+          </FileTrigger>
+        </DropZone>
 
         {(isTauri || import.meta.env.DEV) && (
           <div className="flex items-center justify-between gap-3 mt-1">
