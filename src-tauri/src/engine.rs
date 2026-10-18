@@ -74,13 +74,6 @@ pub fn translate(active: &ActiveModel, req: TranslateRequest<'_>) -> Result<Stri
         req.source_text,
     );
 
-    // Same semantics as the removed `str_to_token(.., AddBos::Always)`:
-    // add BOS/special tokens and parse special tokens in the chat template.
-    // The old API rejected interior NUL bytes, so keep that behavior.
-    anyhow::ensure!(
-        !prompt.contains('\0'),
-        "failed to tokenize prompt: prompt contains a NUL byte"
-    );
     let vocab = active.model.vocab();
     let tokens = vocab.tokenize(prompt.as_bytes(), true, true);
 
