@@ -101,3 +101,26 @@ jobs:
       - name: cargo test
         working-directory: src-tauri
         run: cargo test --lib --no-default-features
+
+  macos-metal:
+    name: Desktop (macOS arm64 + Metal build)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Build the Metal desktop binary
+        run: npm run tauri build -- --debug --no-bundle --features metal
