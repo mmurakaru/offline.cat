@@ -114,6 +114,8 @@ jobs:
           cache: npm
 
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin
 
       - uses: Swatinem/rust-cache@v2
         with:
@@ -123,4 +125,4 @@ jobs:
         run: npm ci
 
       - name: Build the Metal desktop binary
-        run: npm run tauri build -- --debug --no-bundle --features metal
+        run: npm run tauri build -- --target aarch64-apple-darwin --features metal --no-bundle
