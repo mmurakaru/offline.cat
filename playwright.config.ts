@@ -2,6 +2,7 @@ import { defineConfig, devices } from "@playwright/test";
 
 export default defineConfig({
   testDir: "e2e",
+  testIgnore: process.env.CAPTURE_DEMO ? [] : ["**/capture-demo.spec.ts"],
   timeout: 30000,
   retries: 0,
   webServer: {

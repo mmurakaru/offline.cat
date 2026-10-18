@@ -1,3 +1,4 @@
+import { fileURLToPath } from "node:url";
 import { reactRouter } from "@react-router/dev/vite";
 import tailwindcss from "@tailwindcss/vite";
 import type { Plugin } from "vite";
@@ -37,11 +38,24 @@ export default defineConfig({
   ],
   resolve: {
     tsconfigPaths: true,
+    alias: [
+      // The package's "browser" build calls document.createElement, which does not exist in the parser Web Worker.
+      {
+        find: /^decode-named-character-reference$/,
+        replacement: fileURLToPath(
+          new URL(
+            "./node_modules/decode-named-character-reference/index.js",
+            import.meta.url,
+          ),
+        ),
+      },
+    ],
   },
   worker: {
     format: "es",
   },
   optimizeDeps: {
+    entries: ["app/**/*.{ts,tsx}", "!app/**/*.test.{ts,tsx}"],
     exclude: ["@sqlite.org/sqlite-wasm"],
   },
 });
