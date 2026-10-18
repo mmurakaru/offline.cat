@@ -53,7 +53,6 @@ jobs:
       - name: Playwright
         run: npm run e2e
 
-
   rust-fmt:
     name: Rust (rustfmt)
     runs-on: ubuntu-latest
